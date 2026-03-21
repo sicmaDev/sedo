@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEDO - Accompagnement MPME Bénin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #1D9E75;
+            --secondary-color: #16805F;
+            --accent-color: #52B788;
+            --light-bg: #F1F8F5;
+            --dark-text: #1B4332;
+            --gray-text: #6C757D;
+            --white: #FFFFFF;
+            --success: #95D5B2;
+            --warning: #F4A261;
+            --danger: #E76F51;
+            --red: #E53E3E;
+            --green: #38A169;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--dark-text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: var(--white);
+            padding: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .nav-tab {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: var(--white);
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .nav-tab:hover, .nav-tab.active {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .hero-banner {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: var(--white);
+            border-radius: 10px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .hero-banner h2 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .hero-banner p {
+            font-size: 16px;
+            opacity: 0.95;
+        }
+
+        .score-card {
+            background: var(--white);
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin: 30px 0;
+        }
+
+        .score-number {
+            font-size: 72px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .score-label {
+            font-size: 18px;
+            color: var(--gray-text);
+            margin-bottom: 20px;
+        }
+
+        .score-bar {
+            background: var(--light-bg);
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .score-fill {
+            height: 100%;
+            transition: width 0.5s, background 0.5s;
+            border-radius: 15px;
+        }
+
+        .score-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+            background: linear-gradient(135deg, var(--white) 0%, var(--light-bg) 100%);
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 10px 0;
+            transition: color 0.3s ease;
+        }
+
+        .stat-card:hover .stat-value {
+            color: var(--secondary-color);
+        }
+
+        .stat-label {
+            color: var(--gray-text);
+            font-size: 14px;
+        }
+
+        .pictogram-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .pictogram-card {
+            background: var(--white);
+            border-radius: 10px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 3px solid transparent;
+        }
+
+        .pictogram-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .pictogram-card.selected {
+            border-color: var(--primary-color);
+            background: var(--light-bg);
+        }
+
+        .pictogram-icon {
+            font-size: 60px;
+            margin-bottom: 10px;
+        }
+
+        .pictogram-label {
+            font-weight: 600;
+            color: var(--dark-text);
+        }
+
+        .transaction-buttons {
+            display: flex;
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .btn {
+            background: var(--primary-color);
+            color: var(--white);
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .btn-success {
+            background: var(--green);
+            flex: 1;
+        }
+
+        .btn-danger {
+            background: var(--red);
+            flex: 1;
+        }
+
+        .btn-success:hover {
+            background: #2F855A;
+        }
+
+        .btn-danger:hover {
+            background: #C53030;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--dark-text);
+            font-weight: 600;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .progress-steps::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--light-bg);
+            z-index: 0;
+        }
+
+        .progress-line {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            height: 4px;
+            background: var(--primary-color);
+            z-index: 1;
+            transition: width 0.5s;
+        }
+
+        .step {
+            text-align: center;
+            z-index: 2;
+            position: relative;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--white);
+            border: 4px solid var(--light-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .step.active .step-circle {
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+            color: var(--white);
+        }
+
+        .step.completed .step-circle {
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+            color: var(--white);
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-success {
+            background: #D8F3DC;
+            color: var(--primary-color);
+        }
+
+        .alert-warning {
+            background: #FFE5D9;
+            color: #D35400;
+        }
+
+        .alert-info {
+            background: #CCE5FF;
+            color: #0056B3;
+        }
+
+        .voice-interface {
+            background: var(--white);
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .language-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .lang-btn {
+            padding: 10px 25px;
+            border: 2px solid var(--primary-color);
+            background: var(--white);
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .lang-btn.active {
+            background: var(--primary-color);
+            color: var(--white);
+        }
+
+        .mic-button {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            border: none;
+            color: var(--white);
+            font-size: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 30px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(29,158,117,0.3);
+        }
+
+        .mic-button:hover {
+            background: var(--secondary-color);
+            transform: scale(1.05);
+        }
+
+        .mic-button.recording {
+            background: var(--red);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .example-phrases {
+            background: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .example-phrase {
+            background: var(--white);
+            padding: 12px 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .example-phrase:hover {
+            border-color: var(--primary-color);
+            background: var(--light-bg);
+        }
+
+        .transcription {
+            background: var(--light-bg);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            min-height: 60px;
+            font-style: italic;
+            color: var(--gray-text);
+        }
+
+        .ussd-screen {
+            background: #000;
+            color: #00FF00;
+            border-radius: 20px;
+            padding: 40px 30px;
+            font-family: 'Courier New', monospace;
+            max-width: 400px;
+            margin: 30px auto;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .ussd-display {
+            background: #0a0a0a;
+            border: 2px solid #00FF00;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 250px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .ussd-input {
+            background: #0a0a0a;
+            color: #00FF00;
+            border: 2px solid #00FF00;
+            padding: 12px;
+            width: 100%;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .ussd-keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .ussd-key {
+            background: #1a1a1a;
+            color: #00FF00;
+            border: 2px solid #00FF00;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .ussd-key:hover {
+            background: #00FF00;
+            color: #000;
+        }
+
+        .slider-container {
+            background: var(--white);
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: var(--light-bg);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .recommendation-box {
+            background: var(--light-bg);
+            border-left: 4px solid var(--primary-color);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .financing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .financing-card {
+            background: var(--white);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .financing-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .financing-badge.compatible {
+            background: var(--success);
+            color: var(--dark-text);
+        }
+
+        .financing-badge.required {
+            background: var(--warning);
+            color: var(--white);
+        }
+
+        .financing-amount {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 15px 0;
+        }
+
+        .adpme-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: var(--white);
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .nav-tabs {
+                justify-content: center;
+            }
+
+            .nav-tab {
+                font-size: 12px;
+                padding: 8px 15px;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pictogram-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .transaction-buttons {
+                flex-direction: column;
+            }
+
+            .score-number {
+                font-size: 48px;
+            }
+        }
+
+        .confirmation-message {
+            background: var(--success);
+            color: var(--dark-text);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: 600;
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">🌱 SEDO</div>
+            <nav class="nav-tabs">
+                <button class="nav-tab active" onclick="showTab('dashboard')">Dashboard</button>
+                <button class="nav-tab" onclick="showTab('pictogrammes')">Pictogrammes</button>
+                <button class="nav-tab" onclick="showTab('voix')">Voix</button>
+                <button class="nav-tab" onclick="showTab('ussd')">USSD</button>
+                <button class="nav-tab" onclick="showTab('score')">Score</button>
+                <button class="nav-tab" onclick="showTab('financement')">Financement</button>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Onglet 1: Dashboard -->
+        <div id="dashboard" class="tab-content active">
+            <div class="hero-banner">
+                <h2>🎯 Zéro Effort</h2>
+                <p>Mobile Money synchronisé automatiquement chaque jour</p>
+            </div>
+
+            <div class="score-card">
+                <div class="score-label">Score de Finançabilité</div>
+                <div class="score-number" id="dashScore">78/100</div>
+                <div class="score-bar">
+                    <div class="score-fill" id="dashScoreFill" style="width: 78%; background: linear-gradient(90deg, var(--accent-color), var(--primary-color));"></div>
+                </div>
+                <div class="score-badge" id="dashScoreBadge" style="background: var(--success); color: var(--dark-text);">
+                    ✓ Éligible
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Recettes du Mois</div>
+                    <div class="stat-value">485 000 FCFA</div>
+                    <div style="color: var(--green); font-size: 14px; margin-top: 5px;">↑ 12% vs mois dernier</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">Dépenses du Mois</div>
+                    <div class="stat-value">312 000 FCFA</div>
+                    <div style="color: var(--gray-text); font-size: 14px; margin-top: 5px;">Stock + charges</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">Transactions Synchronisées</div>
+                    <div class="stat-value">127</div>
+                    <div style="color: var(--gray-text); font-size: 14px; margin-top: 5px;">Auto Mobile Money</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">Progression Formalisation</div>
+                    <div class="stat-value">65%</div>
+                    <div style="color: var(--gray-text); font-size: 14px; margin-top: 5px;">IFU en cours</div>
+                </div>
+            </div>
+
+            <div class="adpme-card">
+                <h3 style="margin-bottom: 10px;">📋 Profil ADPME/ePME</h3>
+                <p style="margin-bottom: 15px; opacity: 0.95;">Votre profil officiel a été importé automatiquement</p>
+                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
+                    <p><strong>Secteur:</strong> Commerce</p>
+                    <p><strong>Forme juridique:</strong> Entreprise individuelle</p>
+                    <p><strong>Statut:</strong> En cours de formalisation</p>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <span>💡</span>
+                <span><strong>Offre PADME:</strong> Vous êtes éligible à un microcrédit de 500 000 FCFA à 12% d'intérêt</span>
+            </div>
+
+            <div class="alert alert-success">
+                <span>✓</span>
+                <span><strong>Subvention BeniBiz:</strong> Candidature possible pour 1 000 000 FCFA (don)</span>
+            </div>
+
+            <div class="alert alert-warning">
+                <span>⚠️</span>
+                <span><strong>BOA Bénin:</strong> Score requis 75+ — Vous y êtes presque! Complétez votre formalisation</span>
+            </div>
+        </div>
+
+        <!-- Onglet 2: Pictogrammes -->
+        <div id="pictogrammes" class="tab-content">
+            <div class="hero-banner">
+                <h2>📊 Saisie par Pictogrammes</h2>
+                <p>Enregistrez vos transactions cash en 3 étapes simples</p>
+            </div>
+
+            <div class="progress-steps">
+                <div class="progress-line" id="pictoProgressLine" style="width: 0%;"></div>
+                <div class="step active" id="pictoStep1">
+                    <div class="step-circle">1</div>
+                    <div>Secteur</div>
+                </div>
+                <div class="step" id="pictoStep2">
+                    <div class="step-circle">2</div>
+                    <div>Type</div>
+                </div>
+                <div class="step" id="pictoStep3">
+                    <div class="step-circle">3</div>
+                    <div>Montant</div>
+                </div>
+            </div>
+
+            <div id="pictoSectorSelection">
+                <h3 style="margin: 30px 0 20px; text-align: center;">Sélectionnez votre secteur d'activité</h3>
+                <div class="pictogram-grid">
+                    <div class="pictogram-card" onclick="selectSector('Commerce', '🛒')">
+                        <div class="pictogram-icon">🛒</div>
+                        <div class="pictogram-label">Commerce</div>
+                    </div>
+                    <div class="pictogram-card" onclick="selectSector('Élevage', '🐄')">
+                        <div class="pictogram-icon">🐄</div>
+                        <div class="pictogram-label">Élevage</div>
+                    </div>
+                    <div class="pictogram-card" onclick="selectSector('Agriculture', '🌾')">
+                        <div class="pictogram-icon">🌾</div>
+                        <div class="pictogram-label">Agriculture</div>
+                    </div>
+                    <div class="pictogram-card" onclick="selectSector('Artisanat', '🔨')">
+                        <div class="pictogram-icon">🔨</div>
+                        <div class="pictogram-label">Artisanat</div>
+                    </div>
+                    <div class="pictogram-card" onclick="selectSector('Transport', '🚖')">
+                        <div class="pictogram-icon">🚖</div>
+                        <div class="pictogram-label">Transport</div>
+                    </div>
+                    <div class="pictogram-card" onclick="selectSector('Restauration', '🍽️')">
+                        <div class="pictogram-icon">🍽️</div>
+                        <div class="pictogram-label">Restauration</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pictoTypeSelection" class="hidden">
+                <h3 style="margin: 30px 0 20px; text-align: center;">Type de transaction</h3>
+                <div class="transaction-buttons">
+                    <button class="btn btn-success" onclick="selectTransactionType('entree')">
+                        💰 Entrée d'argent
+                    </button>
+                    <button class="btn btn-danger" onclick="selectTransactionType('sortie')">
+                        💸 Sortie d'argent
+                    </button>
+                </div>
+            </div>
+
+            <div id="pictoAmountInput" class="hidden">
+                <h3 style="margin: 30px 0 20px; text-align: center;">Montant de la transaction</h3>
+                <div class="form-group">
+                    <label for="pictoAmount">Montant en FCFA</label>
+                    <input type="number" id="pictoAmount" placeholder="Ex: 25000" min="0">
+                </div>
+                <button class="btn" onclick="savePictogramTransaction()" style="width: 100%;">
+                    ✓ Enregistrer la Transaction
+                </button>
+            </div>
+
+            <div id="pictoConfirmation" class="hidden"></div>
+        </div>
+
+        <!-- Onglet 3: Voix -->
+        <div id="voix" class="tab-content">
+            <div class="hero-banner">
+                <h2>🎙️ Interface Vocale</h2>
+                <p>Parlez naturellement dans votre langue</p>
+            </div>
+
+            <div class="voice-interface">
+                <h3 style="margin-bottom: 20px;">Choisissez votre langue</h3>
+                <div class="language-selector">
+                    <button class="lang-btn active" onclick="selectLanguage('français')" id="langFr">Français</button>
+                    <button class="lang-btn" onclick="selectLanguage('fon')" id="langFon">Fon</button>
+                    <button class="lang-btn" onclick="selectLanguage('yoruba')" id="langYoruba">Yoruba</button>
+                </div>
+
+                <div>
+                    <button class="mic-button" id="micButton" onclick="toggleRecording()">
+                        🎤
+                    </button>
+                    <p id="micStatus" style="color: var(--gray-text); margin-top: 10px;">Cliquez pour parler</p>
+                </div>
+
+                <div class="transcription" id="transcription">
+                    Votre message apparaîtra ici...
+                </div>
+
+                <div id="voiceConfirmation" class="hidden"></div>
+
+                <div class="example-phrases">
+                    <h4 style="margin-bottom: 15px; color: var(--primary-color);">Exemples de phrases</h4>
+                    <div class="example-phrase" onclick="speakPhrase('J\'ai vendu du tissu pour vingt-cinq mille francs')">
+                        "J'ai vendu du tissu pour vingt-cinq mille francs"
+                    </div>
+                    <div class="example-phrase" onclick="speakPhrase('J\'ai acheté du stock pour dix-huit mille francs')">
+                        "J'ai acheté du stock pour dix-huit mille francs"
+                    </div>
+                    <div class="example-phrase" onclick="speakPhrase('Quel est mon score aujourd\'hui')">
+                        "Quel est mon score aujourd'hui"
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet 4: USSD -->
+        <div id="ussd" class="tab-content">
+            <div class="hero-banner">
+                <h2>📱 Interface USSD</h2>
+                <p>Accessible depuis n'importe quel téléphone, sans internet</p>
+            </div>
+
+            <div class="ussd-screen">
+                <div class="ussd-display" id="ussdDisplay">
+                    Bienvenue sur SEDO
+                    <br><br>
+                    Tapez *123# pour commencer
+                </div>
+                <input type="text" class="ussd-input" id="ussdInput" placeholder="*123#" readonly>
+                <button class="btn" onclick="dialUSSD()" style="width: 100%; background: #00FF00; color: #000;">
+                    📞 Appeler
+                </button>
+
+                <div class="ussd-keypad">
+                    <button class="ussd-key" onclick="ussdKeyPress('1')">1</button>
+                    <button class="ussd-key" onclick="ussdKeyPress('2')">2</button>
+                    <button class="ussd-key" onclick="ussdKeyPress('3')">3</button>
+                    <button class="ussd-key" onclick="ussdKeyPress('4')">4</button>
+                    <button class="ussd-key" onclick="ussdKeyPress('5')">5</button>
+                    <button class="ussd-key" onclick="ussdKeyPress('6')">6</button>
+                    <button class="ussd-key" onclick="ussdKeyPress('7')">7</button>
+                    <button class="ussd-key" onclick="ussdKeyPress('8')">8</button>
+                    <button class="ussd-key" onclick="ussdKeyPress('9')">9</button>
+                    <button class="ussd-key" onclick="ussdKeyPress('*')">*</button>
+                    <button class="ussd-key" onclick="ussdKeyPress('0')">0</button>
+                    <button class="ussd-key" onclick="ussdKeyPress('#')">#</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet 5: Score -->
+        <div id="score" class="tab-content">
+            <div class="hero-banner">
+                <h2>📊 Calculateur de Score</h2>
+                <p>Ajustez les paramètres pour voir votre score en temps réel</p>
+            </div>
+
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Mobile Money (30%)</span>
+                    <span id="mobileMoneyValue">75%</span>
+                </div>
+                <input type="range" min="0" max="100" value="75" class="slider" id="mobileMoneySlider" oninput="updateScore()">
+            </div>
+
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Comptabilité (25%)</span>
+                    <span id="comptabiliteValue">80%</span>
+                </div>
+                <input type="range" min="0" max="100" value="80" class="slider" id="comptabiliteSlider" oninput="updateScore()">
+            </div>
+
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Formalisation (25%)</span>
+                    <span id="formalisationValue">65%</span>
+                </div>
+                <input type="range" min="0" max="100" value="65" class="slider" id="formalisationSlider" oninput="updateScore()">
+            </div>
+
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Profil Sectoriel (20%)</span>
+                    <span id="profilValue">85%</span>
+                </div>
+                <input type="range" min="0" max="100" value="85" class="slider" id="profilSlider" oninput="updateScore()">
+            </div>
+
+            <div class="score-card">
+                <div class="score-label">Score Calculé</div>
+                <div class="score-number" id="calculatedScore">76/100</div>
+                <div class="score-bar">
+                    <div class="score-fill" id="calculatedScoreFill" style="width: 76%;"></div>
+                </div>
+                <div class="score-badge" id="calculatedBadge"></div>
+            </div>
+
+            <div class="recommendation-box" id="recommendation"></div>
+        </div>
+
+        <!-- Onglet 6: Financement -->
+        <div id="financement" class="tab-content">
+            <div class="hero-banner">
+                <h2>💰 Offres de Financement</h2>
+                <p>Découvrez les opportunités adaptées à votre profil</p>
+            </div>
+
+            <div class="financing-grid">
+                <div class="financing-card">
+                    <div class="financing-badge compatible">✓ Compatible</div>
+                    <h3 style="margin-bottom: 10px;">PADME Microcrédit</h3>
+                    <div class="financing-amount">500 000 FCFA</div>
+                    <p style="color: var(--gray-text); margin: 10px 0;">Taux: 12% par an</p>
+                    <p style="color: var(--gray-text); margin: 10px 0;">Durée: 6-18 mois</p>
+                    <p style="font-size: 14px; margin: 15px 0;">Score minimum: 60</p>
+                    <p style="font-size: 12px; color: var(--gray-text); margin: 10px 0;">📅 Expire: 31/03/2026</p>
+                    <button class="btn" style="width: 100%; margin-top: 15px;">Contacter PADME</button>
+                </div>
+
+                <div class="financing-card">
+                    <div class="financing-badge compatible">✓ Compatible</div>
+                    <h3 style="margin-bottom: 10px;">BeniBiz Subvention</h3>
+                    <div class="financing-amount">1 000 000 FCFA</div>
+                    <p style="color: var(--gray-text); margin: 10px 0;">Type: Don (0% remboursement)</p>
+                    <p style="color: var(--gray-text); margin: 10px 0;">Secteurs prioritaires</p>
+                    <p style="font-size: 14px; margin: 15px 0;">Score minimum: 70</p>
+                    <p style="font-size: 12px; color: var(--gray-text); margin: 10px 0;">📅 Expire: 30/04/2026</p>
+                    <button class="btn" style="width: 100%; margin-top: 15px;">Postuler</button>
+                </div>
+
+                <div class="financing-card">
+                    <div class="financing-badge required">Score 75+ requis</div>
+                    <h3 style="margin-bottom: 10px;">BOA Bénin Prêt PME</h3>
+                    <div class="financing-amount">5 000 000 FCFA</div>
+                    <p style="color: var(--gray-text); margin: 10px 0;">Taux: 9.5% par an</p>
+                    <p style="color: var(--gray-text); margin: 10px 0;">Durée: 12-36 mois</p>
+                    <p style="font-size: 14px; margin: 15px 0; color: var(--warning);">Score minimum: 75</p>
+                    <p style="font-size: 12px; color: var(--gray-text); margin: 10px 0;">📅 Expire: 31/05/2026</p>
+                    <button class="btn" style="width: 100%; margin-top: 15px; opacity: 0.6;">Score insuffisant</button>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <span>💡</span>
+                <div>
+                    <strong>Conseil:</strong> Complétez votre formalisation pour débloquer l'offre BOA Bénin.
+                    Il vous manque seulement quelques points!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'dashboard';
+        let selectedSector = '';
+        let selectedSectorIcon = '';
+        let selectedType = '';
+        let currentLanguage = 'français';
+        let isRecording = false;
+        let ussdMenu = 'main';
+        let ussdState = {};
+
+        // Navigation entre onglets
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            currentTab = tabName;
+        }
+
+        // Pictogrammes - Étape 1: Sélection du secteur
+        function selectSector(sector, icon) {
+            selectedSector = sector;
+            selectedSectorIcon = icon;
+            
+            document.querySelectorAll('.pictogram-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+
+            setTimeout(() => {
+                document.getElementById('pictoSectorSelection').classList.add('hidden');
+                document.getElementById('pictoTypeSelection').classList.remove('hidden');
+                updatePictoProgress(1);
+            }, 300);
+        }
+
+        // Pictogrammes - Étape 2: Type de transaction
+        function selectTransactionType(type) {
+            selectedType = type;
+            document.getElementById('pictoTypeSelection').classList.add('hidden');
+            document.getElementById('pictoAmountInput').classList.remove('hidden');
+            updatePictoProgress(2);
+        }
+
+        // Pictogrammes - Étape 3: Enregistrement
+        function savePictogramTransaction() {
+            const amount = document.getElementById('pictoAmount').value;
+            if (!amount || amount <= 0) {
+                alert('Veuillez entrer un montant valide');
+                return;
+            }
+
+            const typeText = selectedType === 'entree' ? 'Entrée' : 'Sortie';
+            const typeIcon = selectedType === 'entree' ? '💰' : '💸';
+            
+            const confirmation = `
+                <div class="confirmation-message">
+                    ${typeIcon} Transaction enregistrée avec succès!<br>
+                    ${selectedSectorIcon} ${selectedSector} - ${typeText} de ${parseInt(amount).toLocaleString()} FCFA
+                </div>
+            `;
+            
+            document.getElementById('pictoConfirmation').innerHTML = confirmation;
+            document.getElementById('pictoConfirmation').classList.remove('hidden');
+            document.getElementById('pictoAmountInput').classList.add('hidden');
+            updatePictoProgress(3);
+
+            setTimeout(() => {
+                resetPictogramForm();
+            }, 3000);
+        }
+
+        function resetPictogramForm() {
+            document.getElementById('pictoSectorSelection').classList.remove('hidden');
+            document.getElementById('pictoTypeSelection').classList.add('hidden');
+            document.getElementById('pictoAmountInput').classList.add('hidden');
+            document.getElementById('pictoConfirmation').classList.add('hidden');
+            document.getElementById('pictoAmount').value = '';
+            document.querySelectorAll('.pictogram-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            selectedSector = '';
+            selectedType = '';
+            updatePictoProgress(0);
+        }
+
+        function updatePictoProgress(step) {
+            const steps = ['pictoStep1', 'pictoStep2', 'pictoStep3'];
+            const progressLine = document.getElementById('pictoProgressLine');
+            
+            steps.forEach((stepId, index) => {
+                const stepEl = document.getElementById(stepId);
+                stepEl.classList.remove('active', 'completed');
+                if (index < step) {
+                    stepEl.classList.add('completed');
+                } else if (index === step) {
+                    stepEl.classList.add('active');
+                }
+            });
+
+            progressLine.style.width = (step / 2 * 100) + '%';
+        }
+
+        // Interface vocale
+        function selectLanguage(lang) {
+            currentLanguage = lang;
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        function toggleRecording() {
+            const micButton = document.getElementById('micButton');
+            const micStatus = document.getElementById('micStatus');
+            const transcription = document.getElementById('transcription');
+
+            if (!isRecording) {
+                isRecording = true;
+                micButton.classList.add('recording');
+                micStatus.textContent = 'Écoute en cours...';
+                micStatus.style.color = 'var(--red)';
+                transcription.textContent = '🎤 En écoute...';
+
+                setTimeout(() => {
+                    isRecording = false;
+                    micButton.classList.remove('recording');
+                    micStatus.textContent = 'Cliquez pour parler';
+                    micStatus.style.color = 'var(--gray-text)';
+                    
+                    const phrases = [
+                        'J\'ai vendu du tissu pour vingt-cinq mille francs',
+                        'J\'ai acheté du stock pour dix-huit mille francs',
+                        'Quel est mon score aujourd\'hui'
+                    ];
+                    const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+                    processVoiceCommand(randomPhrase);
+                }, 2000);
+            }
+        }
+
+        function speakPhrase(phrase) {
+            const transcription = document.getElementById('transcription');
+            transcription.textContent = '🎤 "' + phrase + '"';
+            
+            setTimeout(() => {
+                processVoiceCommand(phrase);
+            }, 1000);
+        }
+
+        function processVoiceCommand(phrase) {
+            const transcription = document.getElementById('transcription');
+            const confirmation = document.getElementById('voiceConfirmation');
+            
+            if (phrase.includes('score')) {
+                transcription.textContent = '✓ Votre score actuel est de 78/100 - Vous êtes éligible au financement!';
+            } else if (phrase.includes('vendu') || phrase.includes('vente')) {
+                const match = phrase.match(/(\d+)/);
+                const amount = match ? parseInt(match[0]) : 25000;
+                transcription.textContent = `✓ Vente enregistrée: ${amount.toLocaleString()} FCFA`;
+                confirmation.innerHTML = `<div class="confirmation-message">💰 Transaction enregistrée avec succès!</div>`;
+                confirmation.classList.remove('hidden');
+                setTimeout(() => confirmation.classList.add('hidden'), 3000);
+            } else if (phrase.includes('acheté') || phrase.includes('dépense')) {
+                const match = phrase.match(/(\d+)/);
+                const amount = match ? parseInt(match[0]) : 18000;
+                transcription.textContent = `✓ Dépense enregistrée: ${amount.toLocaleString()} FCFA`;
+                confirmation.innerHTML = `<div class="confirmation-message">💸 Transaction enregistrée avec succès!</div>`;
+                confirmation.classList.remove('hidden');
+                setTimeout(() => confirmation.classList.add('hidden'), 3000);
+            }
+        }
+
+        // USSD Interface
+        function ussdKeyPress(key) {
+            const input = document.getElementById('ussdInput');
+            input.value += key;
+        }
+
+        function dialUSSD() {
+            const input = document.getElementById('ussdInput').value;
+            if (input === '*123#') {
+                showUSSDMenu('main');
+            }
+        }
+
+        function showUSSDMenu(menu) {
+            const display = document.getElementById('ussdDisplay');
+            const input = document.getElementById('ussdInput');
+            
+            if (menu === 'main') {
+                display.innerHTML = `
+                    SEDO - Menu Principal
+                    <br><br>
+                    1. Enregistrer vente
+                    <br>
+                    2. Enregistrer dépense
+                    <br>
+                    3. Mon score
+                    <br>
+                    4. Offres crédit
+                    <br>
+                    0. Quitter
+                    <br><br>
+                    Tapez votre choix:
+                `;
+                ussdMenu = 'main';
+                input.value = '';
+            } else if (menu === 'vente') {
+                display.innerHTML = `
+                    Enregistrer une vente
+                    <br><br>
+                    Entrez le montant en FCFA:
+                    <br><br>
+                    (Ex: 25000)
+                    <br><br>
+                    0. Retour
+                `;
+                ussdMenu = 'vente';
+                input.value = '';
+            } else if (menu === 'depense') {
+                display.innerHTML = `
+                    Enregistrer une dépense
+                    <br><br>
+                    Entrez le montant en FCFA:
+                    <br><br>
+                    (Ex: 18000)
+                    <br><br>
+                    0. Retour
+                `;
+                ussdMenu = 'depense';
+                input.value = '';
+            } else if (menu === 'score') {
+                display.innerHTML = `
+                    Votre Score SEDO
+                    <br><br>
+                    Score: 78/100
+                    <br>
+                    Niveau: Éligible
+                    <br><br>
+                    Vous pouvez accéder au
+                    financement!
+                    <br><br>
+                    0. Menu principal
+                `;
+                ussdMenu = 'score';
+                input.value = '';
+            } else if (menu === 'offres') {
+                display.innerHTML = `
+                    Offres de Crédit
+                    <br><br>
+                    1. PADME - 500k FCFA
+                    <br>
+                    2. BeniBiz - 1M FCFA
+                    <br>
+                    3. BOA - 5M FCFA
+                    <br><br>
+                    0. Menu principal
+                `;
+                ussdMenu = 'offres';
+                input.value = '';
+            }
+        }
+
+        // Gestion des entrées USSD
+        document.addEventListener('DOMContentLoaded', function() {
+            const ussdInput = document.getElementById('ussdInput');
+            if (ussdInput) {
+                ussdInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        const value = this.value;
+                        
+                        if (ussdMenu === 'main') {
+                            if (value === '1') showUSSDMenu('vente');
+                            else if (value === '2') showUSSDMenu('depense');
+                            else if (value === '3') showUSSDMenu('score');
+                            else if (value === '4') showUSSDMenu('offres');
+                            else if (value === '0') {
+                                document.getElementById('ussdDisplay').innerHTML = 'Session terminée.<br><br>Merci d\'utiliser SEDO';
+                            }
+                        } else if (ussdMenu === 'vente' || ussdMenu === 'depense') {
+                            if (value === '0') {
+                                showUSSDMenu('main');
+                            } else if (!isNaN(value) && value > 0) {
+                                const type = ussdMenu === 'vente' ? 'Vente' : 'Dépense';
+                                document.getElementById('ussdDisplay').innerHTML = `
+                                    ${type} enregistrée!
+                                    <br><br>
+                                    Montant: ${parseInt(value).toLocaleString()} FCFA
+                                    <br><br>
+                                    1. Nouvelle transaction
+                                    <br>
+                                    0. Menu principal
+                                `;
+                                this.value = '';
+                            }
+                        } else if (ussdMenu === 'score' || ussdMenu === 'offres') {
+                            if (value === '0') showUSSDMenu('main');
+                        }
+                    }
+                });
+            }
+        });
+
+        // Calculateur de score
+        function updateScore() {
+            const mobileMoney = parseInt(document.getElementById('mobileMoneySlider').value);
+            const comptabilite = parseInt(document.getElementById('comptabiliteSlider').value);
+            const formalisation = parseInt(document.getElementById('formalisationSlider').value);
+            const profil = parseInt(document.getElementById('profilSlider').value);
+
+            document.getElementById('mobileMoneyValue').textContent = mobileMoney + '%';
+            document.getElementById('comptabiliteValue').textContent = comptabilite + '%';
+            document.getElementById('formalisationValue').textContent = formalisation + '%';
+            document.getElementById('profilValue').textContent = profil + '%';
+
+            const score = Math.round(
+                (mobileMoney * 0.30) +
+                (comptabilite * 0.25) +
+                (formalisation * 0.25) +
+                (profil * 0.20)
+            );
+
+            document.getElementById('calculatedScore').textContent = score + '/100';
+            
+            const scoreFill = document.getElementById('calculatedScoreFill');
+            scoreFill.style.width = score + '%';
+            
+            const badge = document.getElementById('calculatedBadge');
+            const recommendation = document.getElementById('recommendation');
+
+            if (score < 50) {
+                scoreFill.style.background = 'linear-gradient(90deg, #E76F51, #E53E3E)';
+                badge.textContent = '⚠️ Non éligible';
+                badge.style.background = '#FFE5D9';
+                badge.style.color = '#D35400';
+                recommendation.innerHTML = `
+                    <h4 style="color: var(--primary-color); margin-bottom: 10px;">💡 Recommandations</h4>
+                    <p>Votre score est encore faible. Concentrez-vous sur:</p>
+                    <ul style="margin: 10px 0 0 20px; line-height: 1.8;">
+                        <li>Améliorer la régularité de vos transactions Mobile Money</li>
+                        <li>Tenir une comptabilité de base</li>
+                        <li>Commencer le processus de formalisation</li>
+                    </ul>
+                `;
+            } else if (score < 65) {
+                scoreFill.style.background = 'linear-gradient(90deg, #F4A261, #E76F51)';
+                badge.textContent = '📈 En progression';
+                badge.style.background = '#FFE5D9';
+                badge.style.color = '#D35400';
+                recommendation.innerHTML = `
+                    <h4 style="color: var(--primary-color); margin-bottom: 10px;">💡 Recommandations</h4>
+                    <p>Vous progressez bien! Pour améliorer votre score:</p>
+                    <ul style="margin: 10px 0 0 20px; line-height: 1.8;">
+                        <li>Continuez à enregistrer toutes vos transactions</li>
+                        <li>Avancez dans votre formalisation (IFU, RCCM)</li>
+                        <li>Maintenez une croissance régulière</li>
+                    </ul>
+                `;
+            } else if (score < 75) {
+                scoreFill.style.background = 'linear-gradient(90deg, #52B788, #40916C)';
+                badge.textContent = '🎯 Presque éligible';
+                badge.style.background = '#D8F3DC';
+                badge.style.color = '#1D9E75';
+                recommendation.innerHTML = `
+                    <h4 style="color: var(--primary-color); margin-bottom: 10px;">💡 Recommandations</h4>
+                    <p>Vous êtes proche de l'éligibilité! Derniers efforts:</p>
+                    <ul style="margin: 10px 0 0 20px; line-height: 1.8;">
+                        <li>Complétez votre formalisation pour gagner des points</li>
+                        <li>Assurez la cohérence de votre comptabilité</li>
+                        <li>Quelques points vous séparent du financement!</li>
+                    </ul>
+                `;
+            } else {
+                scoreFill.style.background = 'linear-gradient(90deg, #52B788, #1D9E75)';
+                badge.textContent = '✓ Éligible';
+                badge.style.background = '#95D5B2';
+                badge.style.color = '#1B4332';
+                recommendation.innerHTML = `
+                    <h4 style="color: var(--primary-color); margin-bottom: 10px;">🎉 Félicitations!</h4>
+                    <p>Vous êtes éligible au financement! Actions recommandées:</p>
+                    <ul style="margin: 10px 0 0 20px; line-height: 1.8;">
+                        <li>Consultez les offres dans l'onglet Financement</li>
+                        <li>Préparez votre dossier de demande</li>
+                        <li>Contactez les partenaires financiers</li>
+                    </ul>
+                `;
+            }
+
+            // Mise à jour du dashboard
+            updateDashboard(score, scoreFill.style.background, badge.textContent, badge.style);
+        }
+
+        function updateDashboard(score, color, badgeText, badgeStyle) {
+            document.getElementById('dashScore').textContent = score + '/100';
+            const dashFill = document.getElementById('dashScoreFill');
+            dashFill.style.width = score + '%';
+            dashFill.style.background = color;
+            
+            const dashBadge = document.getElementById('dashScoreBadge');
+            dashBadge.textContent = badgeText;
+            dashBadge.style.background = badgeStyle.background;
+            dashBadge.style.color = badgeStyle.color;
+        }
+
+        // Initialisation
+        updateScore();
+    </script>
+</body>
+</html>
