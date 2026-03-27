@@ -13,7 +13,7 @@ build/
 !**/.env.example
 
 # Prisma
-backend/prisma/migrations/
+# backend/prisma/migrations/  ← migrations incluses intentionnellement
 
 # Python
 __pycache__/
