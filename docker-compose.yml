@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sedo-db
+    environment:
+      POSTGRES_USER: sedo
+      POSTGRES_PASSWORD: sedo2026
+      POSTGRES_DB: sedo
+    ports:
+      - '5432:5432'
+    volumes:
+      - sedo_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sedo']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: sedo-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://sedo:sedo2026@postgres:5432/sedo
+      JWT_SECRET: sedo_jwt_secret_hackathon_2026
+      PORT: 4000
+      NODE_ENV: development
+      STT_SERVICE_URL: http://stt-service:8000
+    ports:
+      - '4000:4000'
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    restart: unless-stopped
+
+  stt-service:
+    build: ./stt-service
+    container_name: sedo-stt
+    ports:
+      - '8000:8000'
+    volumes:
+      - ./stt-service:/app
+      - sedo_models:/app/models
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: sedo-frontend
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:4000
+      VITE_STT_URL: http://localhost:8000
+    ports:
+      - '5173:5173'
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    restart: unless-stopped
+
+volumes:
+  sedo_pgdata:
+  sedo_models:

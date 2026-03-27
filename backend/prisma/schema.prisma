@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      String   @default("mpme") // mpme | imf | admin
+  fullName  String
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mpmeProfile MPMEProfile?
+  imfProfile  IMFProfile?
+}
+
+model MPMEProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  company     String
+  sector      String
+  location    String   @default("Cotonou, Bénin")
+  employees   Int      @default(1)
+  createdYear Int
+  ifuStatus   String   @default("Non démarré") // Non démarré | En cours | Complet
+  rccmStatus  String   @default("Non démarré")
+  npiStatus   String   @default("Non démarré")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  transactions Transaction[]
+  scores       Score[]
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  mpmeId      String
+  mpme        MPMEProfile @relation(fields: [mpmeId], references: [id], onDelete: Cascade)
+
+  type        String   // entree | sortie
+  amount      Float
+  category    String   @default("autre") // vente | achat | depense | stock | autre
+  description String?
+  source      String   @default("manuel") // manuel | mobile_money
+  date        DateTime @default(now())
+
+  createdAt   DateTime @default(now())
+
+  @@index([mpmeId, date])
+}
+
+model Score {
+  id              String   @id @default(uuid())
+  mpmeId          String
+  mpme            MPMEProfile @relation(fields: [mpmeId], references: [id], onDelete: Cascade)
+
+  total           Float
+  mobileMoney     Float
+  comptabilite    Float
+  formalisation   Float
+  profilSectoriel Float
+  recommendation  String?
+
+  calculatedAt    DateTime @default(now())
+
+  @@index([mpmeId, calculatedAt])
+}
+
+model FinancingOffer {
+  id          String   @id @default(uuid())
+  name        String
+  provider    String
+  logo        String   @default("?")
+  subtitle    String
+  minScore    Float    @default(0)
+  maxAmount   Float
+  rate        Float?
+  duration    String?
+  offerType   String   @default("credit") // credit | subvention | appel_projets
+  sector      String?  // null = tous secteurs
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+}
+
+model IMFProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  institution String
+  createdAt   DateTime @default(now())
+}
