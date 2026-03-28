@@ -1,4 +1,5 @@
 require('dotenv').config();
+if (!process.env.JWT_SECRET) process.env.JWT_SECRET = 'sedo_hackathon_2026_fallback_secret';
 const express = require('express');
 const cors = require('cors');
 
