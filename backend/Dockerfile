@@ -8,5 +8,8 @@ RUN npm install
 COPY . .
 RUN npx prisma generate
 
+COPY start.sh .
+RUN chmod +x start.sh
+
 EXPOSE 4000
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+CMD ["./start.sh"]
