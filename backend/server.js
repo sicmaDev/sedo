@@ -42,4 +42,5 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🚀 SEDO Backend démarré sur http://localhost:${PORT}`);
   console.log(`📊 Environnement : ${process.env.NODE_ENV}`);
+  console.log(`🔑 JWT_SECRET: ${process.env.JWT_SECRET ? 'OK' : 'MANQUANT'}`);
 });
