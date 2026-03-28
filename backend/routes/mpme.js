@@ -10,7 +10,7 @@ router.get('/profile', authenticate, requireRole('mpme'), async (req, res) => {
   try {
     const profile = await prisma.mPMEProfile.findUnique({
       where: { userId: req.user.id },
-      include: { user: { omit: { password: true } } },
+      include: { user: { select: { id: true, email: true, role: true, fullName: true, phone: true, createdAt: true } } },
     });
     if (!profile) return res.status(404).json({ error: 'Profil introuvable' });
     res.json(profile);

@@ -98,10 +98,10 @@ router.get('/me', authenticate, async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       include: { mpmeProfile: true, imfProfile: true },
-      omit: { password: true },
     });
     if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
-    res.json(user);
+    const { password: _, ...safeUser } = user;
+    res.json(safeUser);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });

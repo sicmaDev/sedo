@@ -10,7 +10,7 @@ router.get('/mpme', authenticate, requireRole('imf', 'admin'), async (req, res) 
   try {
     const profiles = await prisma.mPMEProfile.findMany({
       include: {
-        user: { omit: { password: true } },
+        user: { select: { id: true, email: true, role: true, fullName: true, phone: true, createdAt: true } },
         scores: { orderBy: { calculatedAt: 'desc' }, take: 1 },
       },
       orderBy: { createdAt: 'desc' },
@@ -47,7 +47,7 @@ router.get('/mpme/:id', authenticate, requireRole('imf', 'admin'), async (req, r
     const profile = await prisma.mPMEProfile.findUnique({
       where: { id: req.params.id },
       include: {
-        user: { omit: { password: true } },
+        user: { select: { id: true, email: true, role: true, fullName: true, phone: true, createdAt: true } },
         scores: { orderBy: { calculatedAt: 'desc' }, take: 1 },
         transactions: { orderBy: { date: 'desc' }, take: 200 },
       },
@@ -144,7 +144,7 @@ router.get('/alerts', authenticate, requireRole('imf', 'admin'), async (req, res
   try {
     const recentScores = await prisma.score.findMany({
       where: { calculatedAt: { gte: new Date(Date.now() - 7 * 24 * 3600 * 1000) } },
-      include: { mpme: { include: { user: { omit: { password: true } } } } },
+      include: { mpme: { include: { user: { select: { id: true, email: true, role: true, fullName: true, phone: true, createdAt: true } } } } },
       orderBy: { calculatedAt: 'desc' },
       take: 20,
     });
