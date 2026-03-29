@@ -13,7 +13,8 @@ export default function Home() {
   }
 
   if (isMobile) {
-    return <Navigate to="/onboarding" replace />;
+    const done = localStorage.getItem('sedo_onboarding_done');
+    return <Navigate to={done ? '/login' : '/onboarding'} replace />;
   }
 
   return (

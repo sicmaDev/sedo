@@ -40,7 +40,7 @@ export default function Onboarding() {
 
       {/* Skip */}
       <div className="flex justify-end px-5 pt-5">
-        <button onClick={() => navigate('/login')} className="text-white/70 text-sm font-medium">
+        <button onClick={() => { localStorage.setItem('sedo_onboarding_done', 'true'); navigate('/login'); }} className="text-white/70 text-sm font-medium">
           Passer
         </button>
       </div>
@@ -65,11 +65,11 @@ export default function Onboarding() {
 
         {isLast ? (
           <div className="space-y-3">
-            <button onClick={() => navigate('/login')}
+            <button onClick={() => { localStorage.setItem('sedo_onboarding_done', 'true'); navigate('/login'); }}
               className="w-full py-4 bg-white text-sedo-green rounded-2xl font-black text-base active:scale-95 transition-transform shadow-lg">
               Se connecter
             </button>
-            <button onClick={() => navigate('/register')}
+            <button onClick={() => { localStorage.setItem('sedo_onboarding_done', 'true'); navigate('/register'); }}
               className="w-full py-4 bg-white/20 text-white rounded-2xl font-bold text-base active:scale-95 transition-transform border border-white/30">
               Créer un compte
             </button>
