@@ -26,6 +26,7 @@ export default function MPMELayout() {
   const location = useLocation();
   const pageTitle = pageTitles[location.pathname] || 'SEDO';
 
+
   const { data: score } = useQuery({
     queryKey: ['score'],
     queryFn: () => api.get('/score').then((r) => r.data),

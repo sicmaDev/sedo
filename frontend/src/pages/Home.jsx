@@ -13,7 +13,7 @@ export default function Home() {
   }
 
   if (isMobile) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/onboarding" replace />;
   }
 
   return (

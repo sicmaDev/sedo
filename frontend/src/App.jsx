@@ -20,7 +20,7 @@ import Dossier from '@/pages/imf/Dossier';
 import Rapports from '@/pages/imf/Rapports';
 import Alertes from '@/pages/imf/Alertes';
 import IMFProfil from '@/pages/imf/Profil';
-import Onboarding from '@/pages/mpme/Onboarding';
+import Onboarding from '@/pages/Onboarding';
 
 function ProtectedRoute({ children, role }) {
   const { user, loading } = useAuth();
@@ -49,8 +49,8 @@ function AppRoutes() {
       <Route path="/login" element={user ? <Navigate to={user.role === 'imf' ? '/imf' : '/mpme'} /> : <Login />} />
       <Route path="/register" element={user ? <Navigate to={user.role === 'imf' ? '/imf' : '/mpme'} /> : <Register />} />
 
-      {/* Onboarding MPME — hors layout */}
-      <Route path="/mpme/onboarding" element={<ProtectedRoute role="mpme"><Onboarding /></ProtectedRoute>} />
+      {/* Onboarding public */}
+      <Route path="/onboarding" element={<Onboarding />} />
 
       {/* Espace MPME */}
       <Route element={<ProtectedRoute role="mpme"><MPMELayout /></ProtectedRoute>}>
