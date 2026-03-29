@@ -6,25 +6,25 @@ const slides = [
     icon: '🌱',
     title: 'Bienvenue sur SEDO',
     desc: 'La plateforme qui aide les petites entreprises du Bénin à accéder au financement.',
-    bg: 'from-sedo-green to-sedo-green-dark',
+    bg: 'bg-sedo-green',
   },
   {
     icon: '📊',
     title: 'Suivez votre activité',
     desc: 'Enregistrez vos transactions par pictogrammes, par la voix ou via USSD — même sans connexion.',
-    bg: 'from-blue-500 to-blue-700',
+    bg: 'bg-blue-600',
   },
   {
     icon: '💯',
     title: 'Obtenez votre score',
     desc: 'SEDO calcule automatiquement votre score de finançabilité sur 100 points.',
-    bg: 'from-purple-500 to-purple-700',
+    bg: 'bg-purple-600',
   },
   {
     icon: '💰',
     title: 'Accédez au financement',
     desc: 'Les institutions financières partenaires vous envoient des offres adaptées à votre profil.',
-    bg: 'from-orange-400 to-orange-600',
+    bg: 'bg-orange-500',
   },
 ];
 
@@ -36,7 +36,7 @@ export default function Onboarding() {
   const slide = slides[step];
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${slide.bg} flex flex-col transition-all duration-500`}>
+    <div className={`min-h-screen ${slide.bg} flex flex-col transition-all duration-500`}>
 
       {/* Skip */}
       <div className="flex justify-end px-5 pt-5">
