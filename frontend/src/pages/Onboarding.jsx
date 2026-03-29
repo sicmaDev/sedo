@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const slides = [
@@ -7,24 +7,28 @@ const slides = [
     title: 'Bienvenue sur SEDO',
     desc: 'La plateforme qui aide les petites entreprises du Bénin à accéder au financement.',
     bg: 'bg-sedo-green',
+    color: '#1D9E75',
   },
   {
     icon: '📊',
     title: 'Suivez votre activité',
     desc: 'Enregistrez vos transactions par pictogrammes, par la voix ou via USSD — même sans connexion.',
     bg: 'bg-blue-600',
+    color: '#2563eb',
   },
   {
     icon: '💯',
     title: 'Obtenez votre score',
     desc: 'SEDO calcule automatiquement votre score de finançabilité sur 100 points.',
     bg: 'bg-purple-600',
+    color: '#9333ea',
   },
   {
     icon: '💰',
     title: 'Accédez au financement',
     desc: 'Les institutions financières partenaires vous envoient des offres adaptées à votre profil.',
     bg: 'bg-orange-500',
+    color: '#f97316',
   },
 ];
 
@@ -34,6 +38,14 @@ export default function Onboarding() {
 
   const isLast = step === slides.length - 1;
   const slide = slides[step];
+
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', slide.color);
+    return () => {
+      if (meta) meta.setAttribute('content', '#1D9E75');
+    };
+  }, [step]);
 
   return (
     <div className={`min-h-screen ${slide.bg} flex flex-col transition-all duration-500`}>
