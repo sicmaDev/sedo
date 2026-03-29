@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 
+const isMobile = window.matchMedia('(max-width: 1024px)').matches
+  || window.matchMedia('(display-mode: standalone)').matches;
+
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -14,6 +17,11 @@ export default function Login() {
     setError(''); setLoading(true);
     try {
       const user = await login(form.email, form.password);
+      if (isMobile && user.role === 'imf') {
+        setError("L'espace IMF est réservé aux ordinateurs. Connectez-vous depuis un navigateur web.");
+        setLoading(false);
+        return;
+      }
       navigate(user.role === 'imf' ? '/imf' : '/mpme');
     } catch (err) {
       setError(err.response?.data?.error || 'Identifiants incorrects');

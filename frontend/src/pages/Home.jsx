@@ -1,12 +1,19 @@
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 
+const isMobile = window.matchMedia('(max-width: 1024px)').matches
+  || window.matchMedia('(display-mode: standalone)').matches;
+
 export default function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
   if (user) {
     return <Navigate to={user.role === 'imf' ? '/imf' : '/mpme'} replace />;
+  }
+
+  if (isMobile) {
+    return <Navigate to="/login" replace />;
   }
 
   return (
