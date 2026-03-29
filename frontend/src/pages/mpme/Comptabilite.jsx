@@ -16,7 +16,6 @@ export default function Comptabilite() {
   const [toast, setToast] = useState('');
   const [ussdInput, setUssdInput] = useState('');
 
-  // Vocal
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [selectedLang, setSelectedLang] = useState('🇫🇷 Français');
@@ -41,8 +40,7 @@ export default function Comptabilite() {
   const handleSave = () => {
     if (!amount || parseFloat(amount) <= 0) { showToast('⚠️ Montant invalide'); return; }
     saveTransaction({
-      type,
-      amount: parseFloat(amount),
+      type, amount: parseFloat(amount),
       category: sector.includes('Commerce') ? 'vente' : sector.includes('Agriculture') ? 'achat' : 'autre',
       description: desc || `${type === 'entree' ? 'Entrée' : 'Sortie'} — ${sector}`,
       source: 'manuel',
@@ -67,7 +65,6 @@ export default function Comptabilite() {
           const res = await api.post('/stt/transcribe', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
           const text = res.data.text;
           setTranscript(text);
-          // Extraction simple du montant
           const match = text.match(/(\d[\d\s]*)/);
           if (match) {
             const val = match[1].replace(/\s/g, '');
@@ -80,10 +77,7 @@ export default function Comptabilite() {
     } catch { showToast('❌ Microphone inaccessible'); }
   };
 
-  const stopListening = () => {
-    mediaRef.current?.stop();
-    setIsListening(false);
-  };
+  const stopListening = () => { mediaRef.current?.stop(); setIsListening(false); };
 
   const saveVoiceTx = () => {
     if (!parsedTx?.amount) { showToast('⚠️ Montant non détecté, saisissez-le manuellement'); return; }
@@ -92,9 +86,9 @@ export default function Comptabilite() {
   };
 
   return (
-    <div className="px-4 py-5 space-y-5">
+    <div className="px-4 py-5 lg:px-0 lg:py-0 space-y-5 lg:space-y-6">
       {toast && (
-        <div className="fixed top-4 left-4 right-4 z-50 bg-gray-900 text-white rounded-xl px-4 py-3 text-sm font-medium shadow-lg text-center">
+        <div className="fixed top-4 left-4 right-4 lg:left-1/2 lg:-translate-x-1/2 lg:w-96 z-50 bg-gray-900 text-white rounded-xl px-4 py-3 text-sm font-medium shadow-lg text-center">
           {toast}
         </div>
       )}
@@ -103,34 +97,35 @@ export default function Comptabilite() {
       <div className="flex bg-white rounded-2xl p-1 shadow-sm border border-gray-100">
         {[{ id: 'pictogrammes', icon: '🎨', label: 'Pictogrammes' }, { id: 'vocal', icon: '🎙️', label: 'Vocal' }, { id: 'ussd', icon: '📞', label: 'USSD' }].map((t) => (
           <button key={t.id} onClick={() => setActiveTab(t.id)}
-            className={`flex-1 py-2 rounded-xl text-xs font-semibold flex flex-col items-center gap-1 transition-all ${activeTab === t.id ? 'bg-sedo-green text-white shadow-sm' : 'text-gray-400'}`}>
-            <span>{t.icon}</span><span>{t.label}</span>
+            className={`flex-1 py-2 lg:py-3 rounded-xl text-xs lg:text-sm font-semibold flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2 transition-all ${activeTab === t.id ? 'bg-sedo-green text-white shadow-sm' : 'text-gray-400'}`}>
+            <span className="lg:text-base">{t.icon}</span><span>{t.label}</span>
           </button>
         ))}
       </div>
 
       {/* Pictogrammes */}
       {activeTab === 'pictogrammes' && (
-        <div className="space-y-4">
+        <div className="space-y-4 lg:space-y-6">
+          {/* Stepper */}
           <div className="flex items-center gap-2">
             {[1, 2, 3].map((s) => (
               <div key={s} className={`flex items-center gap-1 ${s < 3 ? 'flex-1' : ''}`}>
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${step >= s ? 'bg-sedo-green text-white' : 'bg-gray-200 text-gray-400'}`}>{s}</div>
-                <span className={`text-xs font-medium ${step >= s ? 'text-sedo-green' : 'text-gray-400'}`}>{s === 1 ? 'Secteur' : s === 2 ? 'Type' : 'Montant'}</span>
+                <div className={`w-7 h-7 lg:w-9 lg:h-9 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold transition-all ${step >= s ? 'bg-sedo-green text-white' : 'bg-gray-200 text-gray-400'}`}>{s}</div>
+                <span className={`text-xs lg:text-sm font-medium ${step >= s ? 'text-sedo-green' : 'text-gray-400'}`}>{s === 1 ? 'Secteur' : s === 2 ? 'Type' : 'Montant'}</span>
                 {s < 3 && <div className={`flex-1 h-0.5 mx-1 rounded ${step > s ? 'bg-sedo-green' : 'bg-gray-200'}`} />}
               </div>
             ))}
           </div>
 
           {step === 1 && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <p className="text-sm font-bold text-gray-800 mb-3">Sélectionnez votre secteur</p>
-              <div className="grid grid-cols-3 gap-2">
+            <div className="bg-white rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100">
+              <p className="text-sm lg:text-base font-bold text-gray-800 mb-3 lg:mb-4">Sélectionnez votre secteur</p>
+              <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 lg:gap-3">
                 {sectors.map((s) => (
                   <button key={s} onClick={() => { setSector(s); setStep(2); }}
-                    className={`rounded-xl p-3 border-2 flex flex-col items-center gap-1 transition-all active:scale-95 ${sector === s ? 'border-sedo-green bg-green-50' : 'border-gray-100 bg-gray-50'}`}>
-                    <span className="text-2xl">{s.split(' ')[0]}</span>
-                    <span className="text-[10px] font-medium text-gray-600">{s.split(' ')[1]}</span>
+                    className={`rounded-xl p-3 lg:p-4 border-2 flex flex-col items-center gap-1 lg:gap-2 transition-all active:scale-95 ${sector === s ? 'border-sedo-green bg-green-50' : 'border-gray-100 bg-gray-50'}`}>
+                    <span className="text-2xl lg:text-3xl">{s.split(' ')[0]}</span>
+                    <span className="text-[10px] lg:text-xs font-medium text-gray-600">{s.split(' ')[1]}</span>
                   </button>
                 ))}
               </div>
@@ -138,17 +133,17 @@ export default function Comptabilite() {
           )}
 
           {step === 2 && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-3">
-                <button onClick={() => setStep(1)} className="text-gray-400 text-sm">‹</button>
-                <p className="text-sm font-bold text-gray-800">Type — {sector}</p>
+            <div className="bg-white rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-2 mb-4">
+                <button onClick={() => setStep(1)} className="text-gray-400 text-sm lg:text-base">‹</button>
+                <p className="text-sm lg:text-base font-bold text-gray-800">Type — {sector}</p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 lg:gap-5">
                 {[{ icon: '💰', label: "Entrée d'argent", value: 'entree' }, { icon: '💸', label: "Sortie d'argent", value: 'sortie' }].map((t) => (
                   <button key={t.value} onClick={() => { setType(t.value); setStep(3); }}
-                    className={`rounded-2xl p-5 border-2 flex flex-col items-center gap-2 transition-all active:scale-95 ${type === t.value ? 'border-sedo-green bg-green-50' : 'border-gray-100 bg-gray-50'}`}>
-                    <span className="text-3xl">{t.icon}</span>
-                    <span className="text-sm font-semibold text-gray-700">{t.label}</span>
+                    className={`rounded-2xl p-5 lg:p-8 border-2 flex flex-col items-center gap-2 lg:gap-3 transition-all active:scale-95 ${type === t.value ? 'border-sedo-green bg-green-50' : 'border-gray-100 bg-gray-50'}`}>
+                    <span className="text-3xl lg:text-5xl">{t.icon}</span>
+                    <span className="text-sm lg:text-base font-semibold text-gray-700">{t.label}</span>
                   </button>
                 ))}
               </div>
@@ -156,26 +151,26 @@ export default function Comptabilite() {
           )}
 
           {step === 3 && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-3">
-                <button onClick={() => setStep(2)} className="text-gray-400 text-sm">‹</button>
-                <p className="text-sm font-bold text-gray-800">Montant — {type === 'entree' ? '💰 Entrée' : '💸 Sortie'}</p>
+            <div className="bg-white rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-2 mb-4">
+                <button onClick={() => setStep(2)} className="text-gray-400 text-sm lg:text-base">‹</button>
+                <p className="text-sm lg:text-base font-bold text-gray-800">Montant — {type === 'entree' ? '💰 Entrée' : '💸 Sortie'}</p>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-4 lg:max-w-md">
                 <div>
-                  <label className="text-xs text-gray-500 font-medium">💵 Montant en FCFA</label>
+                  <label className="text-xs lg:text-sm text-gray-500 font-medium">💵 Montant en FCFA</label>
                   <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Ex: 15 000" min="0"
-                    className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 font-bold text-lg focus:outline-none focus:border-sedo-green" />
+                    className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 lg:py-4 text-gray-800 font-bold text-lg lg:text-2xl focus:outline-none focus:border-sedo-green" />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 font-medium">📝 Description (optionnel)</label>
+                  <label className="text-xs lg:text-sm text-gray-500 font-medium">📝 Description (optionnel)</label>
                   <input type="text" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Ex: Vente de marchandises"
-                    className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 text-sm focus:outline-none focus:border-sedo-green" />
+                    className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 lg:py-4 text-gray-800 text-sm lg:text-base focus:outline-none focus:border-sedo-green" />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button onClick={reset} className="py-3 border border-gray-200 rounded-xl text-sm text-gray-500 font-medium">↩️ Recommencer</button>
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={reset} className="py-3 lg:py-4 border border-gray-200 rounded-xl text-sm lg:text-base text-gray-500 font-medium">↩️ Recommencer</button>
                   <button onClick={handleSave} disabled={isPending}
-                    className="py-3 bg-sedo-green text-white rounded-xl text-sm font-bold disabled:opacity-60">
+                    className="py-3 lg:py-4 bg-sedo-green text-white rounded-xl text-sm lg:text-base font-bold disabled:opacity-60">
                     {isPending ? 'Enregistrement...' : '✅ Enregistrer'}
                   </button>
                 </div>
@@ -187,48 +182,43 @@ export default function Comptabilite() {
 
       {/* Vocal */}
       {activeTab === 'vocal' && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <div className="flex gap-2 mb-4 flex-wrap">
+        <div className="space-y-4 lg:space-y-6">
+          <div className="bg-white rounded-2xl p-5 lg:p-8 shadow-sm border border-gray-100">
+            <div className="flex gap-2 mb-4 lg:mb-6 flex-wrap">
               {LANGS.map((l) => (
                 <button key={l} onClick={() => setSelectedLang(l)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selectedLang === l ? 'bg-sedo-green text-white border-sedo-green' : 'border-gray-200 text-gray-500'}`}>{l}</button>
+                  className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-full text-xs lg:text-sm font-medium border transition-all ${selectedLang === l ? 'bg-sedo-green text-white border-sedo-green' : 'border-gray-200 text-gray-500'}`}>{l}</button>
               ))}
             </div>
-            <div className="flex flex-col items-center gap-4 py-4">
+            <div className="flex flex-col items-center gap-4 lg:gap-6 py-4">
               <button onClick={isListening ? stopListening : startListening}
-                className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl shadow-lg transition-all ${isListening ? 'bg-red-500 animate-pulse scale-110' : 'bg-sedo-green'}`}>
+                className={`w-20 h-20 lg:w-32 lg:h-32 rounded-full flex items-center justify-center text-3xl lg:text-5xl shadow-lg transition-all ${isListening ? 'bg-red-500 animate-pulse scale-110' : 'bg-sedo-green'}`}>
                 🎤
               </button>
-              <p className="text-sm text-gray-500">{isListening ? 'Écoute en cours... Appuyez pour arrêter' : 'Appuyez sur le micro pour commencer'}</p>
+              <p className="text-sm lg:text-base text-gray-500 text-center">{isListening ? 'Écoute en cours... Appuyez pour arrêter' : 'Appuyez sur le micro pour commencer'}</p>
               {transcript && (
-                <div className="w-full bg-green-50 border border-green-200 rounded-xl p-3">
-                  <p className="text-xs font-bold text-sedo-green mb-1">Transcription :</p>
-                  <p className="text-sm text-gray-700">{transcript}</p>
+                <div className="w-full bg-green-50 border border-green-200 rounded-xl p-3 lg:p-5">
+                  <p className="text-xs lg:text-sm font-bold text-sedo-green mb-1">Transcription :</p>
+                  <p className="text-sm lg:text-base text-gray-700">{transcript}</p>
                   {parsedTx && (
                     <div className="mt-3 flex gap-2">
-                      <span className="text-xs bg-white border border-green-200 rounded-lg px-2 py-1">
+                      <span className="text-xs lg:text-sm bg-white border border-green-200 rounded-lg px-2 py-1">
                         {parsedTx.type === 'entree' ? '💰' : '💸'} {parsedTx.amount} FCFA
                       </span>
                       <button onClick={saveVoiceTx} disabled={isPending}
-                        className="flex-1 text-xs bg-sedo-green text-white rounded-lg px-3 py-1 font-bold">
+                        className="flex-1 text-xs lg:text-sm bg-sedo-green text-white rounded-lg px-3 py-1 font-bold">
                         ✅ Confirmer
                       </button>
                     </div>
                   )}
                 </div>
               )}
-              {!transcript && !isListening && (
-                <div className="w-full bg-gray-50 rounded-xl p-3 min-h-[60px] text-sm text-gray-400 italic">
-                  Votre transcription apparaîtra ici...
-                </div>
-              )}
             </div>
           </div>
-          <div className="bg-green-50 rounded-2xl p-4">
-            <p className="text-xs font-bold text-sedo-green mb-2">💡 Exemples de phrases</p>
+          <div className="bg-green-50 rounded-2xl p-4 lg:p-6">
+            <p className="text-xs lg:text-sm font-bold text-sedo-green mb-2">💡 Exemples de phrases</p>
             {['"J\'ai reçu 15000 francs pour une vente"', '"J\'ai dépensé 8500 francs pour des marchandises"', '"Entrée de 25000 francs client"'].map((ex) => (
-              <p key={ex} className="text-xs text-green-700 py-1.5 border-b border-green-100 last:border-0">{ex}</p>
+              <p key={ex} className="text-xs lg:text-sm text-green-700 py-2 border-b border-green-100 last:border-0">{ex}</p>
             ))}
           </div>
         </div>
@@ -236,11 +226,11 @@ export default function Comptabilite() {
 
       {/* USSD */}
       {activeTab === 'ussd' && (
-        <div className="space-y-4">
-          <div className="bg-gray-900 rounded-2xl p-5 text-green-400 font-mono">
-            <p className="text-center text-sm font-bold text-white mb-1">SEDO - MPME</p>
-            <p className="text-center text-xs text-gray-400 mb-4">*123#</p>
-            <div className="bg-black rounded-xl p-3 mb-4 text-xs space-y-1">
+        <div className="space-y-4 lg:max-w-md">
+          <div className="bg-gray-900 rounded-2xl p-5 lg:p-8 text-green-400 font-mono">
+            <p className="text-center text-sm lg:text-base font-bold text-white mb-1">SEDO - MPME</p>
+            <p className="text-center text-xs lg:text-sm text-gray-400 mb-4">*123#</p>
+            <div className="bg-black rounded-xl p-3 lg:p-5 mb-4 text-xs lg:text-sm space-y-1">
               <p>Menu Principal:</p>
               <p className="ml-2">1. Enregistrer transaction</p>
               <p className="ml-2">2. Voir mon score</p>
@@ -253,18 +243,18 @@ export default function Comptabilite() {
             <div className="grid grid-cols-3 gap-2 text-center">
               {['1','2','3','4','5','6','7','8','9','*','0','#'].map((k) => (
                 <button key={k} onClick={() => setUssdInput((p) => p + k)}
-                  className="bg-gray-700 text-white rounded-lg py-2 text-sm font-bold active:bg-gray-600">{k}</button>
+                  className="bg-gray-700 text-white rounded-lg py-2 lg:py-3 text-sm lg:text-base font-bold active:bg-gray-600">{k}</button>
               ))}
             </div>
             <div className="grid grid-cols-2 gap-2 mt-2">
-              <button onClick={() => setUssdInput('')} className="bg-red-700 text-white rounded-lg py-2 text-xs font-bold">↩️ Retour</button>
+              <button onClick={() => setUssdInput('')} className="bg-red-700 text-white rounded-lg py-2 lg:py-3 text-xs lg:text-sm font-bold">↩️ Retour</button>
               <button onClick={() => showToast('📱 USSD — Intégration Africa\'s Talking en cours')}
-                className="bg-sedo-green text-white rounded-lg py-2 text-xs font-bold">✅ Valider</button>
+                className="bg-sedo-green text-white rounded-lg py-2 lg:py-3 text-xs lg:text-sm font-bold">✅ Valider</button>
             </div>
           </div>
-          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
-            <p className="text-xs font-bold text-sedo-blue mb-1">📡 USSD via Africa's Talking</p>
-            <p className="text-xs text-blue-700">Composez le *123# depuis n'importe quel téléphone, même sans internet.</p>
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 lg:p-6">
+            <p className="text-xs lg:text-sm font-bold text-sedo-blue mb-1">📡 USSD via Africa's Talking</p>
+            <p className="text-xs lg:text-sm text-blue-700">Composez le *123# depuis n'importe quel téléphone, même sans internet.</p>
           </div>
         </div>
       )}
