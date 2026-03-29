@@ -28,13 +28,13 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(''); setLoading(true);
-    if (isMobile && !phone) { setError('Le numéro de téléphone est requis'); setLoading(false); return; }
-    if (!isMobile && !form.email) { setError('L\'email est requis'); setLoading(false); return; }
+    if (role === 'mpme' && !phone) { setError('Le numéro de téléphone est requis'); setLoading(false); return; }
+    if (role === 'imf' && !form.email) { setError("L'email est requis"); setLoading(false); return; }
     try {
       const payload = {
         ...form,
         role,
-        ...(isMobile ? { phone } : { email: form.email }),
+        ...(role === 'mpme' ? { phone } : { email: form.email }),
       };
       const user = await register(payload);
       navigate(user.role === 'imf' ? '/imf' : '/mpme');
@@ -76,38 +76,21 @@ export default function Register() {
         <form onSubmit={handleSubmit} className="space-y-3">
           <Field label="Nom complet" type="text" value={form.fullName} onChange={set('fullName')} placeholder="Kouassi Ama" required />
 
-          {/* Téléphone avec drapeau sur mobile, email sur desktop */}
-          {isMobile ? (
+          {/* MPME → téléphone | IMF → email */}
+          {role === 'mpme' ? (
             <div>
               <label className="text-xs text-gray-500 font-medium">Téléphone</label>
-              <div className="mt-1 border border-gray-200 rounded-xl px-4 py-3 bg-white focus-within:border-sedo-green">
+              <div className="mt-1 border border-gray-200 rounded-xl px-4 py-3 bg-white focus-within:border-sedo-green [&_input]:outline-none [&_input]:border-none [&_input]:bg-transparent [&_input]:w-full [&_input]:text-sm">
                 <PhoneInput
                   defaultCountry="BJ"
                   value={phone}
                   onChange={setPhone}
                   international
-                  className="w-full text-sm outline-none"
                 />
               </div>
             </div>
           ) : (
-            <Field label="Email" type="email" value={form.email} onChange={set('email')} placeholder="kouassi@example.com" required />
-          )}
-
-          {/* Téléphone optionnel sur desktop */}
-          {!isMobile && (
-            <div>
-              <label className="text-xs text-gray-500 font-medium">Téléphone (optionnel)</label>
-              <div className="mt-1 border border-gray-200 rounded-xl px-4 py-3 bg-white focus-within:border-sedo-green">
-                <PhoneInput
-                  defaultCountry="BJ"
-                  value={phone}
-                  onChange={setPhone}
-                  international
-                  className="w-full text-sm outline-none"
-                />
-              </div>
-            </div>
+            <Field label="Email" type="email" value={form.email} onChange={set('email')} placeholder="padme@institution.bj" required />
           )}
 
           <Field label="Mot de passe" type="password" value={form.password} onChange={set('password')} placeholder="Min. 6 caractères" required />

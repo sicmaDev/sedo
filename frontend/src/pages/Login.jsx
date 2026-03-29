@@ -13,14 +13,19 @@ export default function Login() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loginRole, setLoginRole] = useState('mpme');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Sur mobile : toujours MPME par téléphone
+  // Sur desktop : selon le rôle sélectionné
+  const usesPhone = isMobile || loginRole === 'mpme';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      const user = await login(isMobile ? null : email, password, isMobile ? phone : null);
+      const user = await login(usesPhone ? null : email, password, usesPhone ? phone : null);
       if (isMobile && user.role === 'imf') {
         setError("L'espace IMF est réservé aux ordinateurs. Connectez-vous depuis un navigateur web.");
         setLoading(false);
@@ -42,7 +47,19 @@ export default function Login() {
       </div>
 
       <div className="flex-1 bg-gray-50 rounded-t-3xl pt-8 px-5 pb-8">
-        <h2 className="text-xl font-black text-gray-900 mb-6">Se connecter</h2>
+        <h2 className="text-xl font-black text-gray-900 mb-4">Se connecter</h2>
+
+        {/* Sélecteur MPME / IMF — desktop uniquement */}
+        {!isMobile && (
+          <div className="flex gap-2 mb-4">
+            {[{ id: 'mpme', label: '🌱 MPME' }, { id: 'imf', label: '🏦 Institution' }].map((r) => (
+              <button key={r.id} type="button" onClick={() => setLoginRole(r.id)}
+                className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${loginRole === r.id ? 'border-sedo-green bg-green-50 text-sedo-green' : 'border-gray-200 text-gray-400'}`}>
+                {r.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-3">
@@ -51,16 +68,15 @@ export default function Login() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {isMobile ? (
+          {usesPhone ? (
             <div>
               <label className="text-xs text-gray-500 font-medium">Téléphone</label>
-              <div className="mt-1 border border-gray-200 rounded-xl px-4 py-3 bg-white focus-within:border-sedo-green">
+              <div className="mt-1 border border-gray-200 rounded-xl px-4 py-3 bg-white focus-within:border-sedo-green [&_input]:outline-none [&_input]:border-none [&_input]:bg-transparent [&_input]:w-full [&_input]:text-sm">
                 <PhoneInput
                   defaultCountry="BJ"
                   value={phone}
                   onChange={setPhone}
                   international
-                  className="w-full text-sm outline-none"
                 />
               </div>
             </div>
@@ -68,7 +84,7 @@ export default function Login() {
             <div>
               <label className="text-xs text-gray-500 font-medium">Email</label>
               <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="kouassi@sedo.bj"
+                placeholder="padme@institution.bj"
                 className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-sedo-green" />
             </div>
           )}
@@ -89,7 +105,7 @@ export default function Login() {
         {!isMobile && (
           <div className="mt-4 bg-green-50 rounded-xl p-3">
             <p className="text-xs font-bold text-sedo-green mb-1">Comptes de démo</p>
-            <p className="text-xs text-green-700">MPME : kouassi@sedo.bj / sedo2026</p>
+            <p className="text-xs text-green-700">MPME : +229 97 00 00 01 / sedo2026</p>
             <p className="text-xs text-green-700">IMF  : padme@sedo.bj / sedo2026</p>
           </div>
         )}
