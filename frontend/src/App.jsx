@@ -19,6 +19,7 @@ import IMFMpme from '@/pages/imf/MPME';
 import Dossier from '@/pages/imf/Dossier';
 import Rapports from '@/pages/imf/Rapports';
 import Alertes from '@/pages/imf/Alertes';
+import IMFProfil from '@/pages/imf/Profil';
 
 function ProtectedRoute({ children, role }) {
   const { user, loading } = useAuth();
@@ -63,6 +64,7 @@ function AppRoutes() {
         <Route path="/imf/dossier/:id" element={<Dossier />} />
         <Route path="/imf/rapports" element={<Rapports />} />
         <Route path="/imf/alertes" element={<Alertes />} />
+        <Route path="/imf/profil" element={<IMFProfil />} />
       </Route>
 
       <Route path="*" element={<PageNotFound />} />

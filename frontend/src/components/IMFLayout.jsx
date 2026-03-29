@@ -9,11 +9,12 @@ const tabs = [
   { path: '/imf/mpme', label: 'MPME', icon: '👥' },
   { path: '/imf/rapports', label: 'Rapports', icon: '📈' },
   { path: '/imf/alertes', label: 'Alertes', icon: '🔔' },
+  { path: '/imf/profil', label: 'Profil', icon: '👤' },
 ];
 
 export default function IMFLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const { data: stats } = useQuery({
     queryKey: ['imf-stats'],
