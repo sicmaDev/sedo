@@ -18,8 +18,8 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = async (email, password) => {
-    const res = await api.post('/auth/login', { email, password });
+  const login = async (email, password, phone) => {
+    const res = await api.post('/auth/login', { email, password, phone });
     localStorage.setItem('sedo_token', res.data.token);
     localStorage.setItem('sedo_user', JSON.stringify(res.data.user));
     setUser(res.data.user);

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 import { useAuth } from '@/lib/AuthContext';
 
 const isMobile = window.matchMedia('(max-width: 1024px)').matches
@@ -8,7 +10,9 @@ const isMobile = window.matchMedia('(max-width: 1024px)').matches
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -16,7 +20,7 @@ export default function Login() {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      const user = await login(form.email, form.password);
+      const user = await login(isMobile ? null : email, password, isMobile ? phone : null);
       if (isMobile && user.role === 'imf') {
         setError("L'espace IMF est réservé aux ordinateurs. Connectez-vous depuis un navigateur web.");
         setLoading(false);
@@ -47,31 +51,48 @@ export default function Login() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-xs text-gray-500 font-medium">Email</label>
-            <input type="email" required value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="kouassi@sedo.bj"
-              className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-sedo-green" />
-          </div>
+          {isMobile ? (
+            <div>
+              <label className="text-xs text-gray-500 font-medium">Téléphone</label>
+              <div className="mt-1 border border-gray-200 rounded-xl px-4 py-3 bg-white focus-within:border-sedo-green">
+                <PhoneInput
+                  defaultCountry="BJ"
+                  value={phone}
+                  onChange={setPhone}
+                  international
+                  className="w-full text-sm outline-none"
+                />
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="text-xs text-gray-500 font-medium">Email</label>
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                placeholder="kouassi@sedo.bj"
+                className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-sedo-green" />
+            </div>
+          )}
+
           <div>
             <label className="text-xs text-gray-500 font-medium">Mot de passe</label>
-            <input type="password" required value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-sedo-green" />
           </div>
+
           <button type="submit" disabled={loading}
             className="w-full py-3 bg-sedo-green text-white rounded-xl font-bold text-sm disabled:opacity-60 active:scale-95 transition-transform">
             {loading ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>
 
-        <div className="mt-4 bg-green-50 rounded-xl p-3">
-          <p className="text-xs font-bold text-sedo-green mb-1">Comptes de démo</p>
-          <p className="text-xs text-green-700">MPME : kouassi@sedo.bj / sedo2026</p>
-          <p className="text-xs text-green-700">IMF  : padme@sedo.bj / sedo2026</p>
-        </div>
+        {!isMobile && (
+          <div className="mt-4 bg-green-50 rounded-xl p-3">
+            <p className="text-xs font-bold text-sedo-green mb-1">Comptes de démo</p>
+            <p className="text-xs text-green-700">MPME : kouassi@sedo.bj / sedo2026</p>
+            <p className="text-xs text-green-700">IMF  : padme@sedo.bj / sedo2026</p>
+          </div>
+        )}
 
         <p className="text-center text-xs text-gray-400 mt-6">
           Pas encore de compte ?{' '}

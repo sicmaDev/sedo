@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 router.post('/register', async (req, res) => {
   const { email, password, fullName, phone, role, company, sector, location, employees, createdYear, institution } = req.body;
 
-  if (!email || !password || !fullName || !role) {
+  if (!password || !fullName || !role || (!email && !phone)) {
     return res.status(400).json({ error: 'Champs obligatoires manquants' });
   }
   if (!['mpme', 'imf'].includes(role)) {
@@ -19,13 +19,15 @@ router.post('/register', async (req, res) => {
   }
 
   try {
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) return res.status(409).json({ error: 'Email déjà utilisé' });
+    const existing = await prisma.user.findFirst({
+      where: { OR: [...(email ? [{ email }] : []), ...(phone ? [{ phone }] : [])] }
+    });
+    if (existing) return res.status(409).json({ error: existing.email === email ? 'Email déjà utilisé' : 'Téléphone déjà utilisé' });
 
     const hashed = await bcrypt.hash(password, 10);
 
     const userData = {
-      email, password: hashed, fullName, phone, role,
+      ...(email && { email }), password: hashed, fullName, phone, role,
     };
 
     if (role === 'mpme') {
@@ -65,12 +67,12 @@ router.post('/register', async (req, res) => {
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email et mot de passe requis' });
+  const { email, phone, password } = req.body;
+  if ((!email && !phone) || !password) return res.status(400).json({ error: 'Identifiant et mot de passe requis' });
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { email },
+    const user = await prisma.user.findFirst({
+      where: email ? { email } : { phone },
       include: { mpmeProfile: true, imfProfile: true },
     });
 
