@@ -24,10 +24,7 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-br from-sedo-green to-sedo-green-dark flex flex-col">
       <div className="flex items-center justify-center pt-16 pb-8 px-6">
         <div className="text-center">
-          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
-            <span className="text-2xl font-black text-sedo-green">S</span>
-          </div>
-          <h1 className="text-3xl font-black text-white">SEDO</h1>
+          <img src="/sedo-icon-512.png" alt="SEDO" className="w-20 h-20 mx-auto mb-3 rounded-2xl shadow-lg" />
           <p className="text-green-100 text-xs mt-1">Connexion à votre espace</p>
         </div>
       </div>

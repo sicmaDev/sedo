@@ -14,10 +14,7 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-sedo-green to-sedo-green-dark flex flex-col">
       <div className="flex items-center justify-center pt-16 pb-8 px-6">
         <div className="text-center">
-          <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <span className="text-3xl font-black text-sedo-green">S</span>
-          </div>
-          <h1 className="text-4xl font-black text-white tracking-tight">SEDO</h1>
+          <img src="/sedo-icon-512.png" alt="SEDO" className="w-24 h-24 mx-auto mb-4 rounded-2xl shadow-lg" />
           <p className="text-green-100 text-sm mt-1 font-medium">Solution Intégrée d'Accompagnement des MPME</p>
         </div>
       </div>
