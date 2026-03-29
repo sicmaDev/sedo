@@ -14,10 +14,10 @@ export default function IMFDashboard() {
   );
 
   const cards = [
-    { icon: '👥', label: 'MPME éligibles', value: stats?.eligible ?? 0, sub: `${stats?.tauxEligibilite ?? 0}% du total`, color: 'green' },
-    { icon: '📋', label: 'En progression', value: stats?.enProgression ?? 0, sub: 'Score 31-74', color: 'blue' },
-    { icon: '💰', label: 'MPME totales', value: stats?.total ?? 0, sub: 'Sur la plateforme', color: 'purple' },
-    { icon: '📊', label: 'Score moyen', value: `${stats?.scoresMoyen ?? 0}/100`, sub: 'Toutes MPME', color: 'teal' },
+    { icon: '✅', label: 'MPME éligibles', value: stats?.eligible ?? 0, sub: `${stats?.tauxEligibilite ?? 0}% du total`, color: 'green' },
+    { icon: '📋', label: 'En progression', value: stats?.enProgression ?? 0, sub: 'Score 31–74', color: 'blue' },
+    { icon: '👥', label: 'MPME totales', value: stats?.total ?? 0, sub: 'Sur la plateforme', color: 'purple' },
+    { icon: '💯', label: 'Score moyen', value: `${stats?.scoresMoyen ?? 0}/100`, sub: 'Toutes MPME', color: 'teal' },
   ];
 
   const colorMap = {
@@ -31,33 +31,46 @@ export default function IMFDashboard() {
   const maxVal = Math.max(...evolution.map((e) => e.count), 1);
 
   return (
-    <div className="px-4 py-5 space-y-5">
-      <div className="bg-gradient-to-br from-sedo-blue to-blue-700 rounded-2xl p-5 text-white">
-        <p className="text-blue-100 text-sm">Tableau de bord IMF</p>
-        <h2 className="text-2xl font-black mt-1">Suivi en temps réel</h2>
-        <p className="text-blue-200 text-xs mt-1">MPME éligibles et opportunités de crédit</p>
+    <div className="px-4 py-5 lg:px-0 lg:py-0 space-y-5 lg:space-y-6">
+
+      {/* Hero */}
+      <div className="bg-gradient-to-br from-sedo-blue to-blue-700 rounded-2xl p-5 lg:p-8 text-white">
+        <p className="text-blue-100 text-sm lg:text-base">Tableau de bord IMF</p>
+        <h2 className="text-2xl lg:text-4xl font-black mt-1">Suivi en temps réel</h2>
+        <div className="flex gap-4 lg:gap-8 mt-4">
+          <div>
+            <p className="text-3xl lg:text-5xl font-black">{stats?.eligible ?? '—'}</p>
+            <p className="text-blue-200 text-xs lg:text-sm mt-1">MPME éligibles au financement</p>
+          </div>
+          <div className="border-l border-white/20 pl-4 lg:pl-8">
+            <p className="text-3xl lg:text-5xl font-black">{stats?.tauxEligibilite ?? '—'}%</p>
+            <p className="text-blue-200 text-xs lg:text-sm mt-1">Taux d'éligibilité global</p>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
         {cards.map((s) => (
-          <div key={s.label} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <span className="text-2xl">{s.icon}</span>
-            <p className="font-black text-gray-900 text-xl mt-2">{s.value}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">{s.label}</p>
-            <p className={`text-[10px] mt-1.5 px-2 py-0.5 rounded-full inline-block font-medium ${colorMap[s.color]}`}>{s.sub}</p>
+          <div key={s.label} className="bg-white rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100">
+            <span className="text-2xl lg:text-3xl">{s.icon}</span>
+            <p className="font-black text-gray-900 text-xl lg:text-3xl mt-2">{s.value}</p>
+            <p className="text-[10px] lg:text-xs text-gray-400 mt-0.5">{s.label}</p>
+            <p className={`text-[10px] lg:text-xs mt-2 px-2 py-0.5 rounded-full inline-block font-medium ${colorMap[s.color]}`}>{s.sub}</p>
           </div>
         ))}
       </div>
 
+      {/* Graphique évolution */}
       {evolution.length > 0 && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-sm text-gray-800 mb-4">📈 Évolution sur 6 mois</h3>
-          <div className="flex items-end gap-2 h-28">
+        <div className="bg-white rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100">
+          <h3 className="font-bold text-sm lg:text-base text-gray-800 mb-4 lg:mb-6">📈 Évolution du portefeuille — 6 mois</h3>
+          <div className="flex items-end gap-2 lg:gap-4 h-28 lg:h-48">
             {evolution.map((e, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-[9px] text-sedo-blue font-bold">{e.count}</span>
-                <div className="w-full bg-sedo-blue rounded-t-lg transition-all" style={{ height: `${(e.count / maxVal) * 96}px` }} />
-                <span className="text-[9px] text-gray-400">{e.month}</span>
+                <span className="text-[9px] lg:text-xs text-sedo-blue font-bold">{e.count}</span>
+                <div className="w-full bg-sedo-blue rounded-t-lg transition-all" style={{ height: `${(e.count / maxVal) * 100}%`, minHeight: 4 }} />
+                <span className="text-[9px] lg:text-xs text-gray-400">{e.month}</span>
               </div>
             ))}
           </div>
