@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function Home() {
@@ -6,8 +6,7 @@ export default function Home() {
   const { user } = useAuth();
 
   if (user) {
-    navigate(user.role === 'imf' ? '/imf' : '/mpme');
-    return null;
+    return <Navigate to={user.role === 'imf' ? '/imf' : '/mpme'} replace />;
   }
 
   return (
