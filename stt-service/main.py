@@ -33,6 +33,8 @@ def reconnaitre_phrase(audio_path: str) -> dict:
 
     print(f"📊 Similarité: {round(similarite * 100, 1)}%")
 
+    confiance = float(round(float(similarite) * 100, 1))
+
     if similarite >= SEUIL_SIMILARITE:
         return {
             "reconnue": True,
@@ -40,14 +42,14 @@ def reconnaitre_phrase(audio_path: str) -> dict:
             "type": "vente",
             "montant": 1000,
             "devise": "FCFA",
-            "confiance": round(similarite * 100, 1),
+            "confiance": confiance,
             "langue": "fon"
         }
     else:
         return {
             "reconnue": False,
             "text": "",
-            "confiance": round(similarite * 100, 1),
+            "confiance": confiance,
             "message": "Phrase non reconnue — veuillez répéter"
         }
 
