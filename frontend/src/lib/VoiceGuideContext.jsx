@@ -20,12 +20,12 @@ const STEPS = {
 };
 
 const STEP_AUDIO = {
-  [STEPS.WELCOME]:          'guide_welcome.mp3',
-  [STEPS.COMPTA_ARRIVED]:   'guide_compta_vocal_tab.mp3',
-  [STEPS.VOCAL_TAB_ACTIVE]: 'guide_choose_lang.mp3',
-  [STEPS.LANG_SELECTED]:    'guide_press_mic.mp3',
-  [STEPS.MIC_STOPPED]:      'guide_confirm_tx.mp3',
-  [STEPS.DONE]:             'guide_done.mp3',
+  [STEPS.WELCOME]:          'guide_welcome.ogg',
+  [STEPS.COMPTA_ARRIVED]:   'guide_compta_vocal_tab.ogg',
+  [STEPS.VOCAL_TAB_ACTIVE]: 'guide_choose_lang.ogg',
+  [STEPS.LANG_SELECTED]:    'guide_press_mic.ogg',
+  [STEPS.MIC_STOPPED]:      'guide_confirm_tx.ogg',
+  [STEPS.DONE]:             'guide_done.ogg',
 };
 
 const AUTO_ADVANCE = {
@@ -87,7 +87,7 @@ export function VoiceGuideProvider({ children }) {
       if (location.pathname === '/mpme/comptabilite') {
         setStep(STEPS.COMPTA_ARRIVED);
       } else if (location.pathname !== '/mpme') {
-        playAudio('guide_wrong_nav.mp3');
+        playAudio('guide_wrong_nav.ogg');
       }
     }
   }, [location.pathname]);
@@ -97,7 +97,7 @@ export function VoiceGuideProvider({ children }) {
     switch (step) {
       case STEPS.WAIT_VOCAL_TAB:
         if (action === 'vocal_tab') setStep(STEPS.VOCAL_TAB_ACTIVE);
-        else playAudio('guide_wrong_tab.mp3');
+        else playAudio('guide_wrong_tab.ogg');
         break;
       case STEPS.WAIT_LANG:
         if (action === 'lang_selected') setStep(STEPS.LANG_SELECTED);
