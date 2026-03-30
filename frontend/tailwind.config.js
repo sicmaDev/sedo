@@ -4,8 +4,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        'sedo-green': 'hsl(158, 68%, 37%)',
-        'sedo-green-dark': 'hsl(158, 55%, 32%)',
+        'sedo-green': '#2EBD8E',
+        'sedo-green-dark': '#239E76',
+        'sedo-green-light': '#E8F8F2',
         'sedo-blue': 'hsl(221, 83%, 53%)',
       },
       borderRadius: {

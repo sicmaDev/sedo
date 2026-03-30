@@ -19,10 +19,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sedo-green to-sedo-green-dark flex flex-col">
-      <div className="flex items-center justify-center pt-16 pb-8 px-6">
+      <div className="flex items-center justify-center pt-14 pb-8 px-6">
         <div className="text-center">
-          <img src="/sedo-icon-512.png" alt="SEDO" className="w-24 h-24 mx-auto mb-4 rounded-2xl shadow-lg" />
-          <p className="text-green-100 text-sm mt-1 font-medium">Solution Intégrée d'Accompagnement des MPME</p>
+          <img src="/sedo-logo-green.jpeg" alt="SEDO" className="h-20 mx-auto mb-3 object-contain" />
+          <p className="text-green-100 text-sm font-medium">Solution Intégrée d'Accompagnement des MPME</p>
         </div>
       </div>
 

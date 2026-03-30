@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 
-const SECTOR_COLORS = ['#1D9E75', '#2563EB', '#F59E0B', '#8B5CF6', '#EF4444'];
+const SECTOR_COLORS = ['#2EBD8E', '#2563EB', '#F59E0B', '#8B5CF6', '#EF4444'];
 
 export default function Rapports() {
   const { data: stats } = useQuery({

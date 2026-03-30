@@ -43,12 +43,9 @@ export default function MPMELayout() {
       {/* Sidebar desktop */}
       <aside className="hidden lg:flex flex-col w-72 bg-white border-r border-gray-100 fixed top-0 left-0 bottom-0 z-40 shadow-sm">
         {/* Brand */}
-        <div className="flex items-center gap-3 px-6 py-6 border-b border-gray-100">
-          <img src="/sedo-icon-512.png" alt="SEDO" className="w-12 h-12 rounded-xl" />
-          <div>
-            <p className="font-black text-gray-900 text-lg leading-tight">SEDO</p>
-            <p className="text-xs text-gray-400">Espace MPME</p>
-          </div>
+        <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
+          <img src="/sedo-logo-white.jpeg" alt="SEDO" className="h-10 object-contain" />
+          <p className="text-xs text-gray-400 ml-auto">Espace MPME</p>
         </div>
 
         {/* Score pill */}
@@ -92,8 +89,8 @@ export default function MPMELayout() {
         {/* Header mobile */}
         <div className="lg:hidden bg-sedo-green text-white px-4 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-30">
           <NavLink to="/" className="text-white opacity-80 text-lg">‹</NavLink>
-          <div className="flex-1">
-            <h1 className="font-bold text-base leading-tight">Espace MPME</h1>
+          <div className="flex-1 flex items-center gap-2">
+            <img src="/sedo-icon-green.jpeg" alt="SEDO" className="h-8 w-8 rounded-lg object-cover" />
             <p className="text-green-100 text-xs">{profile?.company || user?.fullName}</p>
           </div>
           <div className="bg-white/20 rounded-full px-3 py-1">

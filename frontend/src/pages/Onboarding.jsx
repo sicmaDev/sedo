@@ -7,7 +7,7 @@ const slides = [
     title: 'Bienvenue sur SEDO',
     desc: 'La plateforme qui aide les petites entreprises du Bénin à accéder au financement.',
     bg: 'bg-sedo-green',
-    color: '#1D9E75',
+    color: '#2EBD8E',
   },
   {
     icon: '📊',
@@ -43,7 +43,7 @@ export default function Onboarding() {
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', slide.color);
     return () => {
-      if (meta) meta.setAttribute('content', '#1D9E75');
+      if (meta) meta.setAttribute('content', '#2EBD8E');
     };
   }, [step]);
 
