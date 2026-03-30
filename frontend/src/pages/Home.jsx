@@ -21,7 +21,9 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-sedo-green to-sedo-green-dark flex flex-col">
       <div className="flex items-center justify-center pt-14 pb-8 px-6">
         <div className="text-center">
-          <img src="/sedo-logo-green.jpeg" alt="SEDO" className="h-20 mx-auto mb-3 object-contain" />
+          <div className="bg-white rounded-2xl px-6 py-3 inline-block shadow-md mx-auto mb-3">
+            <img src="/sedo-logo-white.jpeg" alt="SEDO" className="h-14 object-contain" />
+          </div>
           <p className="text-green-100 text-sm font-medium">Solution Intégrée d'Accompagnement des MPME</p>
         </div>
       </div>

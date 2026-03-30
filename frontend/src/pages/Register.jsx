@@ -47,7 +47,9 @@ export default function Register() {
     <div className="min-h-screen bg-gradient-to-br from-sedo-green to-sedo-green-dark flex flex-col">
       <div className="flex items-center justify-center pt-12 pb-6 px-6">
         <div className="text-center">
-          <img src="/sedo-logo-green.jpeg" alt="SEDO" className="h-14 mx-auto mb-1 object-contain" />
+          <div className="bg-white rounded-2xl px-5 py-2 inline-block shadow-md mx-auto mb-1">
+            <img src="/sedo-logo-white.jpeg" alt="SEDO" className="h-10 object-contain" />
+          </div>
         </div>
       </div>
 

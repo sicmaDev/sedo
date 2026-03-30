@@ -38,7 +38,7 @@ export default function IMFLayout() {
       <aside className="hidden lg:flex flex-col w-72 bg-white border-r border-gray-100 fixed top-0 left-0 bottom-0 z-40 shadow-sm">
         {/* Brand */}
         <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
-          <img src="/sedo-logo-white.jpeg" alt="SEDO" className="h-10 object-contain" />
+          <img src="/sedo-logo-white.jpeg" alt="SEDO" className="h-10 object-contain rounded-xl" />
           <p className="text-xs text-gray-400 ml-auto">Espace Institution</p>
         </div>
 

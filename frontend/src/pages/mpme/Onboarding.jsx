@@ -64,7 +64,7 @@ export default function Onboarding() {
       {/* Étape 1 — Bienvenue */}
       {step === 1 && (
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 text-center">
-          <img src="/sedo-icon-white.jpeg" alt="SEDO" className="w-24 h-24 rounded-2xl shadow-lg mb-6 object-cover" />
+          <img src="/sedo-icon-white.jpeg" alt="SEDO" className="w-24 h-24 rounded-2xl shadow-lg mb-6 object-cover border border-gray-100" />
           <h1 className="text-2xl font-black text-gray-900 mb-2">
             Bienvenue, {firstName} !
           </h1>
