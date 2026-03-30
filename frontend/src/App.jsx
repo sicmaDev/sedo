@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import { VoiceGuideProvider } from '@/lib/VoiceGuideContext';
 import PageNotFound from '@/lib/PageNotFound';
 
 import Home from '@/pages/Home';
@@ -80,7 +81,9 @@ export default function App() {
   return (
     <AuthProvider>
       <Router>
-        <AppRoutes />
+        <VoiceGuideProvider>
+          <AppRoutes />
+        </VoiceGuideProvider>
       </Router>
     </AuthProvider>
   );

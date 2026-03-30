@@ -1,12 +1,14 @@
 import { useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { useVoiceGuide } from '@/lib/VoiceGuideContext';
 
 const sectors = ['🏪 Commerce', '🐄 Élevage', '🌾 Agriculture', '✂️ Artisanat', '🚗 Transport', '🍽️ Restauration'];
 const LANGS = ['🇫🇷 Français', 'Fon', 'Yoruba', 'Adja'];
 
 export default function Comptabilite() {
   const queryClient = useQueryClient();
+  const { reportAction } = useVoiceGuide() || {};
   const [activeTab, setActiveTab] = useState('pictogrammes');
   const [step, setStep] = useState(1);
   const [sector, setSector] = useState('');
@@ -74,10 +76,11 @@ export default function Comptabilite() {
       };
       mr.start();
       setIsListening(true);
+      reportAction?.('mic_start');
     } catch { showToast('❌ Microphone inaccessible'); }
   };
 
-  const stopListening = () => { mediaRef.current?.stop(); setIsListening(false); };
+  const stopListening = () => { mediaRef.current?.stop(); setIsListening(false); reportAction?.('mic_stop'); };
 
   const saveVoiceTx = () => {
     if (!parsedTx?.amount) { showToast('⚠️ Montant non détecté, saisissez-le manuellement'); return; }
@@ -96,7 +99,7 @@ export default function Comptabilite() {
       {/* Tabs */}
       <div className="flex bg-white rounded-2xl p-1 shadow-sm border border-gray-100">
         {[{ id: 'pictogrammes', icon: '🎨', label: 'Pictogrammes' }, { id: 'vocal', icon: '🎙️', label: 'Vocal' }, { id: 'ussd', icon: '📞', label: 'USSD' }].map((t) => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)}
+          <button key={t.id} onClick={() => { setActiveTab(t.id); reportAction?.(t.id === 'vocal' ? 'vocal_tab' : 'wrong_tab'); }}
             className={`flex-1 py-2 lg:py-3 rounded-xl text-xs lg:text-sm font-semibold flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2 transition-all ${activeTab === t.id ? 'bg-sedo-green text-white shadow-sm' : 'text-gray-400'}`}>
             <span className="lg:text-base">{t.icon}</span><span>{t.label}</span>
           </button>
@@ -186,7 +189,7 @@ export default function Comptabilite() {
           <div className="bg-white rounded-2xl p-5 lg:p-8 shadow-sm border border-gray-100">
             <div className="flex gap-2 mb-4 lg:mb-6 flex-wrap">
               {LANGS.map((l) => (
-                <button key={l} onClick={() => setSelectedLang(l)}
+                <button key={l} onClick={() => { setSelectedLang(l); reportAction?.('lang_selected'); }}
                   className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-full text-xs lg:text-sm font-medium border transition-all ${selectedLang === l ? 'bg-sedo-green text-white border-sedo-green' : 'border-gray-200 text-gray-500'}`}>{l}</button>
               ))}
             </div>
@@ -205,7 +208,7 @@ export default function Comptabilite() {
                       <span className="text-xs lg:text-sm bg-white border border-green-200 rounded-lg px-2 py-1">
                         {parsedTx.type === 'entree' ? '💰' : '💸'} {parsedTx.amount} FCFA
                       </span>
-                      <button onClick={saveVoiceTx} disabled={isPending}
+                      <button onClick={() => { saveVoiceTx(); reportAction?.('confirmed'); }} disabled={isPending}
                         className="flex-1 text-xs lg:text-sm bg-sedo-green text-white rounded-lg px-3 py-1 font-bold">
                         ✅ Confirmer
                       </button>
