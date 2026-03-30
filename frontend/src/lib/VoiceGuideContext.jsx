@@ -54,7 +54,7 @@ const AUTO_ADVANCE = {
   [STEPS.MIC_STOPPED]:      STEPS.WAIT_CONFIRM,
 };
 
-function SpotlightOverlay({ targetSelector, onWrongClick }) {
+function SpotlightOverlay({ targetSelector }) {
   const [rect, setRect] = useState(null);
   const PAD = 12;
   const RADIUS = 14;
@@ -90,10 +90,10 @@ function SpotlightOverlay({ targetSelector, onWrongClick }) {
   const hh = rect.h + PAD * 2;
 
   return (
-    <div className="fixed inset-0 z-[60]" onClick={onWrongClick}>
-      {/* Overlay SVG avec trou */}
+    // pointer-events: none — purement visuel, tous les clics passent à travers
+    <div className="fixed inset-0 z-[60] pointer-events-none">
       <svg
-        className="absolute inset-0 w-full h-full pointer-events-none"
+        className="absolute inset-0 w-full h-full"
         style={{ width: '100vw', height: '100vh' }}
       >
         <defs>
@@ -108,7 +108,6 @@ function SpotlightOverlay({ targetSelector, onWrongClick }) {
           fill="rgba(29, 158, 117, 0.88)"
           mask="url(#sedo-spotlight-mask)"
         />
-        {/* Bordure pulsante autour de la cible */}
         <rect
           x={hx} y={hy} width={hw} height={hh} rx={RADIUS}
           fill="none"
@@ -117,18 +116,6 @@ function SpotlightOverlay({ targetSelector, onWrongClick }) {
           opacity="0.9"
         />
       </svg>
-
-      {/* Zone transparente au-dessus de la cible — laisse passer les clics */}
-      <div
-        className="absolute"
-        style={{
-          left: hx, top: hy,
-          width: hw, height: hh,
-          borderRadius: RADIUS,
-          pointerEvents: 'none',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      />
     </div>
   );
 }
@@ -223,17 +210,36 @@ export function VoiceGuideProvider({ children }) {
   const currentTarget = step ? WAIT_TARGETS[step] : null;
   const correctionAudio = step ? CORRECTION_AUDIO[step] : null;
 
+  // Listener global — bloque les clics hors cible
+  useEffect(() => {
+    if (!currentTarget) return;
+
+    const handleClick = (e) => {
+      const el = document.querySelector(currentTarget);
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const PAD = 20;
+      const inTarget =
+        e.clientX >= r.left - PAD && e.clientX <= r.right + PAD &&
+        e.clientY >= r.top - PAD && e.clientY <= r.bottom + PAD;
+
+      if (!inTarget) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (correctionAudio) playAudio(correctionAudio);
+      }
+    };
+
+    document.addEventListener('click', handleClick, true);
+    return () => document.removeEventListener('click', handleClick, true);
+  }, [currentTarget, correctionAudio, playAudio]);
+
   return (
     <VoiceGuideContext.Provider value={{ step, speaking, reportAction }}>
       {children}
 
-      {/* Spotlight overlay */}
-      {currentTarget && (
-        <SpotlightOverlay
-          targetSelector={currentTarget}
-          onWrongClick={() => correctionAudio && playAudio(correctionAudio)}
-        />
-      )}
+      {/* Spotlight overlay — visuel uniquement */}
+      {currentTarget && <SpotlightOverlay targetSelector={currentTarget} />}
 
       {/* Bouton flottant guide */}
       {step !== null && (
