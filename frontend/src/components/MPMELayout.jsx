@@ -144,6 +144,7 @@ export default function MPMELayout() {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex shadow-lg z-50">
         {tabs.map((tab) => (
           <NavLink key={tab.path} to={tab.path} end={tab.exact}
+            {...(tab.path === '/mpme/comptabilite' ? { 'data-guide': 'nav_compta' } : {})}
             className={({ isActive }) =>
               `flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors ${isActive ? 'text-sedo-green' : 'text-gray-400'}`}>
             {({ isActive }) => (

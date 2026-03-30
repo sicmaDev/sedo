@@ -99,7 +99,7 @@ export default function Comptabilite() {
       {/* Tabs */}
       <div className="flex bg-white rounded-2xl p-1 shadow-sm border border-gray-100">
         {[{ id: 'pictogrammes', icon: '🎨', label: 'Pictogrammes' }, { id: 'vocal', icon: '🎙️', label: 'Vocal' }, { id: 'ussd', icon: '📞', label: 'USSD' }].map((t) => (
-          <button key={t.id} onClick={() => { setActiveTab(t.id); reportAction?.(t.id === 'vocal' ? 'vocal_tab' : 'wrong_tab'); }}
+          <button key={t.id} {...(t.id === 'vocal' ? { 'data-guide': 'tab_vocal' } : {})} onClick={() => { setActiveTab(t.id); reportAction?.(t.id === 'vocal' ? 'vocal_tab' : 'wrong_tab'); }}
             className={`flex-1 py-2 lg:py-3 rounded-xl text-xs lg:text-sm font-semibold flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2 transition-all ${activeTab === t.id ? 'bg-sedo-green text-white shadow-sm' : 'text-gray-400'}`}>
             <span className="lg:text-base">{t.icon}</span><span>{t.label}</span>
           </button>
@@ -189,12 +189,12 @@ export default function Comptabilite() {
           <div className="bg-white rounded-2xl p-5 lg:p-8 shadow-sm border border-gray-100">
             <div className="flex gap-2 mb-4 lg:mb-6 flex-wrap">
               {LANGS.map((l) => (
-                <button key={l} onClick={() => { setSelectedLang(l); reportAction?.('lang_selected'); }}
+                <button key={l} {...(l === LANGS[0] ? { 'data-guide': 'lang_selector' } : {})} onClick={() => { setSelectedLang(l); reportAction?.('lang_selected'); }}
                   className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-full text-xs lg:text-sm font-medium border transition-all ${selectedLang === l ? 'bg-sedo-green text-white border-sedo-green' : 'border-gray-200 text-gray-500'}`}>{l}</button>
               ))}
             </div>
             <div className="flex flex-col items-center gap-4 lg:gap-6 py-4">
-              <button onClick={isListening ? stopListening : startListening}
+              <button data-guide="mic_button" onClick={isListening ? stopListening : startListening}
                 className={`w-20 h-20 lg:w-32 lg:h-32 rounded-full flex items-center justify-center text-3xl lg:text-5xl shadow-lg transition-all ${isListening ? 'bg-red-500 animate-pulse scale-110' : 'bg-sedo-green'}`}>
                 🎤
               </button>
@@ -208,7 +208,7 @@ export default function Comptabilite() {
                       <span className="text-xs lg:text-sm bg-white border border-green-200 rounded-lg px-2 py-1">
                         {parsedTx.type === 'entree' ? '💰' : '💸'} {parsedTx.amount} FCFA
                       </span>
-                      <button onClick={() => { saveVoiceTx(); reportAction?.('confirmed'); }} disabled={isPending}
+                      <button data-guide="confirm_button" onClick={() => { saveVoiceTx(); reportAction?.('confirmed'); }} disabled={isPending}
                         className="flex-1 text-xs lg:text-sm bg-sedo-green text-white rounded-lg px-3 py-1 font-bold">
                         ✅ Confirmer
                       </button>
