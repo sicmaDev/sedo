@@ -22,13 +22,27 @@ print(f"✅ Référence chargée — shape: {reference.shape}")
 
 SEUIL_SIMILARITE = 0.80
 
-def calculer_empreinte(audio_path: str) -> np.ndarray:
+SEUIL_ENERGIE = 0.01  # RMS minimum pour considérer qu'il y a de la voix
+
+def calculer_empreinte(audio_path: str):
     audio, sr = librosa.load(audio_path, sr=16000)
+    rms = float(np.sqrt(np.mean(audio ** 2)))
+    print(f"🔊 Énergie RMS: {round(rms, 4)}")
+    if rms < SEUIL_ENERGIE:
+        return None, rms
     mfcc = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=13)
-    return np.mean(mfcc, axis=1)
+    return np.mean(mfcc, axis=1), rms
 
 def reconnaitre_phrase(audio_path: str) -> dict:
-    empreinte = calculer_empreinte(audio_path)
+    empreinte, rms = calculer_empreinte(audio_path)
+    if empreinte is None:
+        print("🔇 Audio trop silencieux")
+        return {
+            "reconnue": False,
+            "text": "",
+            "confiance": 0,
+            "message": "Aucune voix détectée — veuillez parler"
+        }
     similarite = 1 - cosine(empreinte, reference)
 
     print(f"📊 Similarité: {round(similarite * 100, 1)}%")
