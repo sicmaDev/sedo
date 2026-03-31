@@ -185,7 +185,11 @@ export default function Formalisation() {
     mutationFn: (data) => api.put('/mpme/profile', data),
     onSuccess: () => {
       queryClient.invalidateQueries(['mpme-profile']);
-      queryClient.invalidateQueries(['score']);
+      // Recalcul du score après changement de statut IFU/RCCM/NPI
+      api.post('/score/calculate').then(() => {
+        queryClient.invalidateQueries(['score']);
+        queryClient.invalidateQueries(['mpme-stats']);
+      });
       setUpdating(null);
     },
     onError: () => setUpdating(null),
