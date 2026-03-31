@@ -67,11 +67,11 @@ export default function Comptabilite() {
         try {
           const res = await api.post('/stt/transcribe', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
           const text = res.data.text;
+          const donnees = res.data.donnees;
           setTranscript(text);
-          const match = text.match(/(\d[\d\s]*)/);
-          if (match) {
-            const val = match[1].replace(/\s/g, '');
-            setParsedTx({ amount: val, type: text.toLowerCase().includes('dépens') || text.toLowerCase().includes('achat') ? 'sortie' : 'entree' });
+          if (donnees && donnees.montant) {
+            const typeFromAction = donnees.action === 'achat' ? 'sortie' : 'entree';
+            setParsedTx({ amount: String(donnees.montant), type: typeFromAction });
           }
         } catch { setTranscript('Service STT indisponible. Veuillez réessayer.'); }
       };
