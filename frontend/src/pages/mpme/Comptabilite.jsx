@@ -290,7 +290,7 @@ export default function Comptabilite() {
     if (!amount || parseFloat(amount) <= 0) { showToast('⚠️ Montant invalide'); return; }
     saveTransaction({
       type, amount: parseFloat(amount),
-      category: sector.includes('Commerce') ? 'vente' : sector.includes('Agriculture') ? 'achat' : 'autre',
+      category: type === 'entree' ? 'vente' : 'achat',
       description: desc || `${type === 'entree' ? 'Entrée' : 'Sortie'} — ${sector}`,
       source: 'manuel',
       sector: sector.replace(/^[^\s]+\s/, ''), // retire l'emoji, ex: "🌾 Agriculture" → "Agriculture"
