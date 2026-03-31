@@ -108,58 +108,73 @@ router.get('/journal.pdf', authenticate, requireRole('mpme'), async (req, res) =
 
     y += 62;
 
+    // Grouper les transactions par article (description)
+    const grouped = {};
+    transactions.forEach((tx) => {
+      const key = (tx.description || 'Sans libellé').trim();
+      if (!grouped[key]) grouped[key] = { entrees: 0, sorties: 0, count: 0 };
+      if (tx.type === 'entree') grouped[key].entrees += tx.amount;
+      else grouped[key].sorties += tx.amount;
+      grouped[key].count++;
+    });
+
+    const articles = Object.entries(grouped).map(([name, data]) => ({
+      name,
+      entrees: data.entrees,
+      sorties: data.sorties,
+      net: data.entrees - data.sorties,
+      count: data.count,
+    }));
+
     // Table header
-    const cols = { date: marginL, type: marginL + 75, cat: marginL + 145, desc: marginL + 240, amount: marginL + contentW - 100 };
-    doc.rect(marginL, y, contentW, 20).fill(DARK);
-    doc.fillColor('white').fontSize(8).font('Helvetica-Bold')
-      .text('DATE', cols.date + 4, y + 6)
-      .text('TYPE', cols.type + 4, y + 6)
-      .text('CATÉGORIE', cols.cat + 4, y + 6)
-      .text('DESCRIPTION', cols.desc + 4, y + 6)
-      .text('MONTANT', cols.amount, y + 6, { width: 100, align: 'right' });
+    const colsG = {
+      article: marginL,
+      entrees: marginL + contentW - 240,
+      sorties: marginL + contentW - 150,
+      net: marginL + contentW - 60,
+    };
+    doc.rect(marginL, y, contentW, 22).fill(DARK);
+    doc.fillColor('white').fontSize(9).font('Helvetica-Bold')
+      .text('ARTICLE / LIBELLÉ', colsG.article + 4, y + 7)
+      .text('ENTRÉES', colsG.entrees, y + 7, { width: 85, align: 'right' })
+      .text('SORTIES', colsG.sorties, y + 7, { width: 85, align: 'right' })
+      .text('NET', colsG.net, y + 7, { width: 55, align: 'right' });
+    y += 24;
 
-    y += 22;
-
-    // Rows
-    if (transactions.length === 0) {
+    if (articles.length === 0) {
       doc.rect(marginL, y, contentW, 30).fillAndStroke(LIGHT_GRAY, '#e5e7eb');
       doc.fillColor(GRAY).fontSize(10).font('Helvetica').text('Aucune transaction pour cette période.', marginL, y + 9, { width: contentW, align: 'center' });
       y += 32;
     } else {
-      transactions.forEach((tx, idx) => {
-        if (y > doc.page.height - 80) {
-          doc.addPage();
-          y = 40;
-        }
-        const rowH = 22;
+      articles.forEach((art, idx) => {
+        if (y > doc.page.height - 80) { doc.addPage(); y = 40; }
+        const rowH = 24;
         const bg = idx % 2 === 0 ? '#ffffff' : LIGHT_GRAY;
         doc.rect(marginL, y, contentW, rowH).fill(bg);
 
-        const isEntree = tx.type === 'entree';
-        doc.fillColor(DARK).fontSize(8).font('Helvetica')
-          .text(formatDate(tx.date), cols.date + 4, y + 7)
-          .text(tx.category || '-', cols.cat + 4, y + 7, { width: 90, ellipsis: true })
-          .text(tx.description || '-', cols.desc + 4, y + 7, { width: 110, ellipsis: true });
-        doc.fillColor(isEntree ? GREEN : RED).font('Helvetica-Bold')
-          .text(isEntree ? 'Entrée' : 'Sortie', cols.type + 4, y + 7);
-        doc.fillColor(isEntree ? GREEN : RED).font('Helvetica-Bold')
-          .text((isEntree ? '+' : '-') + formatFCFA(tx.amount), cols.amount, y + 7, { width: 100, align: 'right' });
+        doc.fillColor(DARK).fontSize(9).font('Helvetica-Bold')
+          .text(art.name, colsG.article + 4, y + 7, { width: colsG.entrees - colsG.article - 8, ellipsis: true });
+        doc.fillColor(GREEN).font('Helvetica')
+          .text(art.entrees > 0 ? formatFCFA(art.entrees) : '—', colsG.entrees, y + 7, { width: 85, align: 'right' });
+        doc.fillColor(RED)
+          .text(art.sorties > 0 ? formatFCFA(art.sorties) : '—', colsG.sorties, y + 7, { width: 85, align: 'right' });
+        doc.fillColor(art.net >= 0 ? GREEN : RED).font('Helvetica-Bold')
+          .text((art.net >= 0 ? '+' : '') + formatFCFA(art.net), colsG.net, y + 7, { width: 55, align: 'right' });
 
-        // row bottom border
         doc.moveTo(marginL, y + rowH).lineTo(marginL + contentW, y + rowH).strokeColor('#e5e7eb').lineWidth(0.5).stroke();
         y += rowH;
       });
 
       // Totals row
       y += 4;
-      doc.rect(marginL, y, contentW, 24).fill(DARK);
-      doc.fillColor('white').fontSize(9).font('Helvetica-Bold')
-        .text('TOTAL', cols.date + 4, y + 7)
-        .text(formatFCFA(totalEntrees), cols.desc + 4, y + 7, { width: 110 })
-        .text(formatFCFA(totalSorties), cols.desc + 120, y + 7, { width: 110 });
+      doc.rect(marginL, y, contentW, 26).fill(DARK);
+      doc.fillColor('white').fontSize(10).font('Helvetica-Bold')
+        .text('TOTAL', colsG.article + 4, y + 7)
+        .text(formatFCFA(totalEntrees), colsG.entrees, y + 7, { width: 85, align: 'right' })
+        .text(formatFCFA(totalSorties), colsG.sorties, y + 7, { width: 85, align: 'right' });
       doc.fillColor(soldeNet >= 0 ? GREEN : RED).font('Helvetica-Bold')
-        .text((soldeNet >= 0 ? '+' : '') + formatFCFA(soldeNet), cols.amount, y + 7, { width: 100, align: 'right' });
-      y += 28;
+        .text((soldeNet >= 0 ? '+' : '') + formatFCFA(soldeNet), colsG.net, y + 7, { width: 55, align: 'right' });
+      y += 30;
     }
 
     // Footer
