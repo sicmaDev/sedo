@@ -14,6 +14,7 @@ import Score from '@/pages/mpme/Score';
 import Financement from '@/pages/mpme/Financement';
 import Profil from '@/pages/mpme/Profil';
 import Secteur from '@/pages/mpme/Secteur';
+import PhoneSimulator from '@/pages/mpme/PhoneSimulator';
 
 import IMFLayout from '@/components/IMFLayout';
 import IMFDashboard from '@/pages/imf/Dashboard';
@@ -61,6 +62,7 @@ function AppRoutes() {
         <Route path="/mpme/score" element={<Score />} />
         <Route path="/mpme/financement" element={<Financement />} />
         <Route path="/mpme/secteur" element={<Secteur />} />
+        <Route path="/mpme/simulateur" element={<PhoneSimulator />} />
         <Route path="/mpme/profil" element={<Profil />} />
       </Route>
 

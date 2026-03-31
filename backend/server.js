@@ -13,6 +13,7 @@ const sttRoutes = require('./routes/stt');
 const sectorsRoutes = require('./routes/sectors');
 const ivrRoutes = require('./routes/ivr');
 const { startIVRScheduler } = require('./services/ivr-scheduler');
+const simulatorRoutes = require('./routes/simulator');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -35,6 +36,7 @@ app.use('/api/imf', imfRoutes);
 app.use('/api/stt', sttRoutes);
 app.use('/api/sectors', sectorsRoutes);
 app.use('/api/ivr', ivrRoutes);
+app.use('/api/simulator', simulatorRoutes);
 
 // 404
 app.use((req, res) => res.status(404).json({ error: 'Route introuvable' }));
