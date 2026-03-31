@@ -193,7 +193,7 @@ export default function Secteur() {
   );
 
   return (
-    <div className="px-4 py-5 lg:px-0 lg:py-0 space-y-4 lg:space-y-5">
+    <div className="px-4 py-5 lg:px-0 lg:py-0 space-y-4 lg:space-y-5 overflow-x-hidden">
 
       {/* Hero */}
       <div className="bg-gradient-to-br from-sedo-green to-sedo-green-dark rounded-2xl p-5 lg:p-8 text-white">
@@ -232,16 +232,16 @@ export default function Secteur() {
                   detail: item.body,
                 })}
                   className={`w-full text-left rounded-xl border p-3 lg:p-4 ${style.bg} active:scale-[0.98] transition-transform`}>
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 min-w-0">
                     <style.Icon className={`w-4 h-4 flex-shrink-0 ${style.text}`} />
-                    <span className={`text-[10px] lg:text-xs font-bold uppercase tracking-wide ${style.text}`}>{style.label}</span>
-                    <span className="text-[10px] lg:text-xs text-gray-400 ml-auto">
+                    <span className={`text-[10px] lg:text-xs font-bold uppercase tracking-wide flex-shrink-0 ${style.text}`}>{style.label}</span>
+                    <span className="text-[10px] lg:text-xs text-gray-400 ml-auto flex-shrink-0">
                       {new Date(item.publishedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                     </span>
                     <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                   </div>
-                  <p className="text-sm font-semibold text-gray-800">{item.title}</p>
-                  <p className="text-xs lg:text-sm text-gray-600 mt-1 leading-relaxed line-clamp-2">{item.body}</p>
+                  <p className="text-sm font-semibold text-gray-800 break-words">{item.title}</p>
+                  <p className="text-xs lg:text-sm text-gray-600 mt-1 leading-relaxed line-clamp-2 break-words">{item.body}</p>
                 </button>
               );
             })}
