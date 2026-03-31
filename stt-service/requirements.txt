@@ -5,3 +5,6 @@ numpy
 scipy
 python-multipart
 soundfile
+transformers
+torch
+sentencepiece
