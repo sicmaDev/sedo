@@ -4,14 +4,14 @@ import api from '@/lib/api';
 import {
   BookOpen, Users, ShoppingCart, TrendingUp, Scale, Lightbulb,
   Volume2, VolumeX, WifiOff, RefreshCw, ChevronDown, ChevronUp,
-  Bell, Info, AlertTriangle, Sparkles,
+  Bell, Info, AlertTriangle, Sparkles, X, ChevronRight,
 } from 'lucide-react';
 
 const CACHE_KEY = (sector) => `sedo_sector_${sector}`;
 const NEWS_CACHE_KEY = (sector) => `sedo_news_${sector}`;
 const NEWS_SEEN_KEY = (sector) => `sedo_news_seen_${sector}`;
-const CACHE_TTL = 24 * 60 * 60 * 1000;   // 24h
-const NEWS_TTL  =  1 * 60 * 60 * 1000;   // 1h
+const CACHE_TTL = 24 * 60 * 60 * 1000;
+const NEWS_TTL  =  1 * 60 * 60 * 1000;
 
 function getCached(key, ttl = CACHE_TTL) {
   try {
@@ -29,6 +29,57 @@ function setCache(key, data) {
   } catch {}
 }
 
+// ─── Bottom Sheet ──────────────────────────────────────────────────────────────
+function BottomSheet({ item, onClose }) {
+  useEffect(() => {
+    if (item) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [item]);
+
+  if (!item) return null;
+
+  const { Icon, iconColor, tag, title, subtitle, detail } = item;
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/50 z-[80]" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[90] max-h-[80vh] flex flex-col">
+        {/* Handle */}
+        <div className="flex-shrink-0 pt-3 pb-2 flex justify-center">
+          <div className="w-10 h-1 bg-gray-200 rounded-full" />
+        </div>
+
+        {/* Header */}
+        <div className="flex-shrink-0 px-5 pb-4 border-b border-gray-100 flex items-start gap-3">
+          {Icon && (
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${iconColor || 'bg-green-50'}`}>
+              <Icon className="w-5 h-5" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            {tag && <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400">{tag}</span>}
+            <h3 className="font-black text-gray-900 text-base leading-tight mt-0.5">{title}</h3>
+            {subtitle && <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>}
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 flex-shrink-0 ml-1">
+            <X className="w-4 h-4 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          <p className="text-sm text-gray-700 leading-relaxed">{detail}</p>
+        </div>
+
+        {/* Safe area bottom */}
+        <div className="flex-shrink-0 pb-6" />
+      </div>
+    </>
+  );
+}
+
+// ─── Section accordion ─────────────────────────────────────────────────────────
 function Section({ icon: Icon, title, children, color = 'text-sedo-green', badge }) {
   const [open, setOpen] = useState(true);
   return (
@@ -58,6 +109,7 @@ const NEWS_STYLES = {
 export default function Secteur() {
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
+  const [selected, setSelected] = useState(null);
 
   const { data: profile } = useQuery({
     queryKey: ['mpme-profile'],
@@ -66,7 +118,6 @@ export default function Secteur() {
 
   const sector = profile?.sector;
 
-  // Fiche sectorielle
   const { data: sheet, isLoading, isError, refetch } = useQuery({
     queryKey: ['sector-sheet', sector],
     enabled: !!sector,
@@ -85,7 +136,6 @@ export default function Secteur() {
     staleTime: CACHE_TTL,
   });
 
-  // Actualités
   const { data: news = [] } = useQuery({
     queryKey: ['sector-news', sector],
     enabled: !!sector,
@@ -102,13 +152,11 @@ export default function Secteur() {
     staleTime: NEWS_TTL,
   });
 
-  // Marquer les actualités comme vues à l'arrivée sur la page
   useEffect(() => {
     if (!sector) return;
     localStorage.setItem(NEWS_SEEN_KEY(sector), new Date().toISOString());
   }, [sector]);
 
-  // Badge alertes non lues
   const lastSeen = sector ? localStorage.getItem(NEWS_SEEN_KEY(sector)) : null;
   const unreadAlerts = news.filter(
     (n) => n.type === 'alerte' && (!lastSeen || new Date(n.publishedAt) > new Date(lastSeen))
@@ -175,17 +223,26 @@ export default function Secteur() {
             {news.map((item) => {
               const style = NEWS_STYLES[item.type] || NEWS_STYLES.info;
               return (
-                <div key={item.id} className={`rounded-xl border p-3 lg:p-4 ${style.bg}`}>
+                <button key={item.id} onClick={() => setSelected({
+                  Icon: style.Icon,
+                  iconColor: `${style.bg} ${style.text}`,
+                  tag: style.label,
+                  title: item.title,
+                  subtitle: new Date(item.publishedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
+                  detail: item.body,
+                })}
+                  className={`w-full text-left rounded-xl border p-3 lg:p-4 ${style.bg} active:scale-[0.98] transition-transform`}>
                   <div className="flex items-center gap-2 mb-1">
                     <style.Icon className={`w-4 h-4 flex-shrink-0 ${style.text}`} />
                     <span className={`text-[10px] lg:text-xs font-bold uppercase tracking-wide ${style.text}`}>{style.label}</span>
                     <span className="text-[10px] lg:text-xs text-gray-400 ml-auto">
                       {new Date(item.publishedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                     </span>
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                   </div>
                   <p className="text-sm font-semibold text-gray-800">{item.title}</p>
-                  <p className="text-xs lg:text-sm text-gray-600 mt-1 leading-relaxed">{item.body}</p>
-                </div>
+                  <p className="text-xs lg:text-sm text-gray-600 mt-1 leading-relaxed line-clamp-2">{item.body}</p>
+                </button>
               );
             })}
           </div>
@@ -194,29 +251,49 @@ export default function Secteur() {
 
       {/* Acteurs */}
       <Section icon={Users} title="Acteurs clés du secteur">
-        <div className="space-y-3">
+        <div className="space-y-1">
           {sheet.actors.map((a, i) => (
-            <div key={i} className="flex gap-3">
-              <div className="w-2 h-2 rounded-full bg-sedo-green mt-1.5 flex-shrink-0" />
-              <div>
+            <button key={i} onClick={() => setSelected({
+              Icon: Users,
+              iconColor: 'bg-green-50 text-sedo-green',
+              tag: 'Acteur',
+              title: a.role,
+              subtitle: a.description,
+              detail: a.details,
+            })}
+              className="w-full text-left flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors">
+              <div className="w-2 h-2 rounded-full bg-sedo-green flex-shrink-0" />
+              <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-800">{a.role}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{a.description}</p>
+                <p className="text-xs text-gray-500 mt-0.5 truncate">{a.description}</p>
               </div>
-            </div>
+              <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+            </button>
           ))}
         </div>
       </Section>
 
       {/* Prix du marché */}
       <Section icon={ShoppingCart} title="Prix du marché" color="text-blue-500">
-        <div className="space-y-2">
+        <div className="space-y-1">
           {sheet.marketPrices.map((p, i) => (
-            <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+            <button key={i} onClick={() => setSelected({
+              Icon: ShoppingCart,
+              iconColor: 'bg-blue-50 text-blue-500',
+              tag: 'Prix du marché',
+              title: p.item,
+              subtitle: `${p.price} ${p.unit}`,
+              detail: p.context,
+            })}
+              className="w-full text-left flex items-center justify-between py-2.5 px-2 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 last:border-0">
               <p className="text-sm text-gray-700">{p.item}</p>
-              <p className="text-sm font-bold text-blue-600 text-right">
-                {p.price} <span className="font-normal text-gray-400">{p.unit}</span>
-              </p>
-            </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <p className="text-sm font-bold text-blue-600">
+                  {p.price} <span className="font-normal text-gray-400">{p.unit}</span>
+                </p>
+                <ChevronRight className="w-4 h-4 text-gray-300" />
+              </div>
+            </button>
           ))}
         </div>
         <p className="text-[10px] lg:text-xs text-gray-400 mt-3">Prix indicatifs — marché de Cotonou</p>
@@ -234,13 +311,25 @@ export default function Secteur() {
 
       {/* Conseils */}
       <Section icon={Lightbulb} title="Conseils pratiques" color="text-yellow-500">
-        <div className="space-y-3">
-          {sheet.tips.map((tip, i) => (
-            <div key={i} className="flex gap-3 bg-yellow-50 rounded-xl p-3">
-              <span className="text-yellow-500 font-black text-sm flex-shrink-0">{i + 1}</span>
-              <p className="text-sm text-gray-700">{tip}</p>
-            </div>
-          ))}
+        <div className="space-y-2">
+          {sheet.tips.map((tip, i) => {
+            const text = tip.text || tip;
+            const detail = tip.details;
+            return (
+              <button key={i} onClick={() => detail && setSelected({
+                Icon: Lightbulb,
+                iconColor: 'bg-yellow-50 text-yellow-500',
+                tag: `Conseil ${i + 1}`,
+                title: text,
+                detail,
+              })}
+                className={`w-full text-left flex gap-3 bg-yellow-50 rounded-xl p-3 transition-colors ${detail ? 'active:bg-yellow-100 hover:bg-yellow-100' : ''}`}>
+                <span className="text-yellow-500 font-black text-sm flex-shrink-0">{i + 1}</span>
+                <p className="text-sm text-gray-700 flex-1">{text}</p>
+                {detail && <ChevronRight className="w-4 h-4 text-yellow-400 flex-shrink-0 self-center" />}
+              </button>
+            );
+          })}
         </div>
       </Section>
 
@@ -249,6 +338,9 @@ export default function Secteur() {
           <WifiOff className="w-3.5 h-3.5" /> Fiche disponible hors-ligne
         </div>
       )}
+
+      {/* Bottom Sheet détail */}
+      <BottomSheet item={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }
