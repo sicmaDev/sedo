@@ -1,8 +1,9 @@
 #!/bin/sh
-set -e
+
+cd /app
 
 echo "Application des migrations..."
 ./node_modules/.bin/prisma migrate deploy
 
 echo "Demarrage du serveur..."
-node server.js
+node /app/server.js
