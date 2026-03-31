@@ -3,20 +3,20 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { Home, BarChart2, Award, Wallet, User, LogOut, BookOpen } from 'lucide-react';
 
 const tabs = [
-  { path: '/mpme', label: 'Accueil', Icon: Home, exact: true },
-  { path: '/mpme/comptabilite', label: 'Comptabilité', Icon: BarChart2 },
-  { path: '/mpme/score', label: 'Score', Icon: Award },
-  { path: '/mpme/financement', label: 'Financement', Icon: Wallet },
-  { path: '/mpme/secteur', label: 'Secteur', Icon: BookOpen },
-  { path: '/mpme/profil', label: 'Profil', Icon: User },
+  { path: '/mpme', label: 'Accueil', icon: '🏠', exact: true },
+  { path: '/mpme/comptabilite', label: 'Comptabilité', icon: '📊' },
+  { path: '/mpme/formalisation', label: 'Formalisation', icon: '📝' },
+  { path: '/mpme/score', label: 'Score', icon: '💯' },
+  { path: '/mpme/financement', label: 'Financement', icon: '💰' },
+  { path: '/mpme/profil', label: 'Profil', icon: '👤' },
 ];
 
 const pageTitles = {
   '/mpme': 'Tableau de bord',
   '/mpme/comptabilite': 'Comptabilité',
+  '/mpme/formalisation': 'Formalisation',
   '/mpme/score': 'Score de finançabilité',
   '/mpme/financement': 'Opportunités de financement',
   '/mpme/profil': 'Mon profil',
@@ -65,7 +65,7 @@ export default function MPMELayout() {
                 `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
                   isActive ? 'bg-green-50 text-sedo-green' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
                 }`}>
-              <tab.Icon className="w-5 h-5 flex-shrink-0" />
+              <span className="text-xl">{tab.icon}</span>
               <span className="text-base">{tab.label}</span>
             </NavLink>
           ))}
@@ -122,11 +122,11 @@ export default function MPMELayout() {
                 </div>
                 <NavLink to="/mpme/profil" onClick={() => setTopbarMenu(false)}
                   className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50">
-                  <User className="w-4 h-4" /> Mon profil
+                  👤 Mon profil
                 </NavLink>
                 <button onClick={logout}
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50">
-                  <LogOut className="w-4 h-4" /> Se déconnecter
+                  🚪 Se déconnecter
                 </button>
               </div>
             )}
@@ -148,7 +148,7 @@ export default function MPMELayout() {
               `flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors ${isActive ? 'text-sedo-green' : 'text-gray-400'}`}>
             {({ isActive }) => (
               <>
-                <tab.Icon className={`w-5 h-5 transition-transform ${isActive ? 'scale-110' : ''}`} />
+                <span className={`text-xl transition-transform ${isActive ? 'scale-110' : ''}`}>{tab.icon}</span>
                 <span className={`text-[10px] font-medium ${isActive ? 'text-sedo-green' : 'text-gray-400'}`}>{tab.label}</span>
                 {isActive && <div className="w-1 h-1 bg-sedo-green rounded-full mt-0.5" />}
               </>
