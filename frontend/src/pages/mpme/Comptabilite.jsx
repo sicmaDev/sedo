@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useVoiceGuide } from '@/lib/VoiceGuideContext';
-import { Grid3x3, Mic, Phone, ArrowUpCircle, ArrowDownCircle, Check, Lightbulb, Radio, DollarSign } from 'lucide-react';
+import { Grid3x3, Mic, Phone, ArrowUpCircle, ArrowDownCircle, Check, Lightbulb, Radio, DollarSign, PhoneCall, Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 
 const sectors = ['🏪 Commerce', '🐄 Élevage', '🌾 Agriculture', '✂️ Artisanat', '🚗 Transport', '🍽️ Restauration'];
 const LANGS = ['🇫🇷 Français', 'Fon', 'Yoruba', 'Adja'];
@@ -18,6 +18,43 @@ export default function Comptabilite() {
   const [desc, setDesc] = useState('');
   const [toast, setToast] = useState('');
   const [ussdInput, setUssdInput] = useState('');
+
+  // IVR state
+  const [ivrPhone, setIvrPhone] = useState('');
+  const [ivrTime, setIvrTime] = useState('18:00');
+  const [ivrSessions, setIvrSessions] = useState([]);
+  const [ivrSaving, setIvrSaving] = useState(false);
+  const [ivrCalling, setIvrCalling] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'ivr') {
+      api.get('/mpme/profile').then((r) => {
+        if (r.data.ivrPhone) setIvrPhone(r.data.ivrPhone);
+        if (r.data.ivrTime) setIvrTime(r.data.ivrTime);
+      }).catch(() => {});
+      api.get('/ivr/sessions').then((r) => setIvrSessions(r.data || [])).catch(() => {});
+    }
+  }, [activeTab]);
+
+  const saveIvrConfig = async () => {
+    setIvrSaving(true);
+    try {
+      await api.post('/ivr/config', { ivrPhone, ivrTime });
+      showToast('✅ Configuration sauvegardée !');
+    } catch { showToast('❌ Erreur lors de la sauvegarde'); }
+    finally { setIvrSaving(false); }
+  };
+
+  const callNow = async () => {
+    setIvrCalling(true);
+    try {
+      await api.post('/ivr/call/now');
+      showToast('📞 Appel lancé !');
+      setTimeout(() => api.get('/ivr/sessions').then((r) => setIvrSessions(r.data || [])).catch(() => {}), 3000);
+    } catch (e) {
+      showToast('❌ ' + (e.response?.data?.error || 'Erreur appel'));
+    } finally { setIvrCalling(false); }
+  };
 
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -99,7 +136,7 @@ export default function Comptabilite() {
 
       {/* Tabs */}
       <div className="flex bg-white rounded-2xl p-1 shadow-sm border border-gray-100">
-        {[{ id: 'pictogrammes', Icon: Grid3x3, label: 'Pictogrammes' }, { id: 'vocal', Icon: Mic, label: 'Vocal' }, { id: 'ussd', Icon: Phone, label: 'USSD' }].map((t) => (
+        {[{ id: 'pictogrammes', Icon: Grid3x3, label: 'Pictogrammes' }, { id: 'vocal', Icon: Mic, label: 'Vocal' }, { id: 'ussd', Icon: Phone, label: 'USSD' }, { id: 'ivr', Icon: PhoneCall, label: 'Appel Auto' }].map((t) => (
           <button key={t.id} {...(t.id === 'vocal' ? { 'data-guide': 'tab_vocal' } : {})} onClick={() => { setActiveTab(t.id); reportAction?.(t.id === 'vocal' ? 'vocal_tab' : 'wrong_tab'); }}
             className={`flex-1 py-2 lg:py-3 rounded-xl text-xs lg:text-sm font-semibold flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2 transition-all ${activeTab === t.id ? 'bg-sedo-green text-white shadow-sm' : 'text-gray-400'}`}>
             <t.Icon className="w-4 h-4 lg:w-5 lg:h-5" /><span>{t.label}</span>
@@ -228,6 +265,96 @@ export default function Comptabilite() {
               <p key={ex} className="text-xs lg:text-sm text-green-700 py-2 border-b border-green-100 last:border-0">{ex}</p>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Appel Automatique IVR */}
+      {activeTab === 'ivr' && (
+        <div className="space-y-4 lg:space-y-6">
+
+          {/* Configuration */}
+          <div className="bg-white rounded-2xl p-5 lg:p-6 shadow-sm border border-gray-100 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <PhoneCall className="w-5 h-5 text-sedo-green" />
+              <p className="text-sm lg:text-base font-bold text-gray-800">Configuration de l'appel automatique</p>
+            </div>
+            <p className="text-xs lg:text-sm text-gray-500">SEDO appellera automatiquement l'employeur chaque jour à l'heure choisie pour enregistrer les ventes et dépenses vocalement.</p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs lg:text-sm text-gray-500 font-medium flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Numéro de l'employeur</label>
+                <input type="tel" value={ivrPhone} onChange={(e) => setIvrPhone(e.target.value)}
+                  placeholder="+22961000000"
+                  className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 text-sm lg:text-base focus:outline-none focus:border-sedo-green" />
+                <p className="text-[10px] lg:text-xs text-gray-400 mt-1">Format international : +229 suivi du numéro</p>
+              </div>
+
+              <div>
+                <label className="text-xs lg:text-sm text-gray-500 font-medium flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Heure d'appel quotidien</label>
+                <input type="time" value={ivrTime} onChange={(e) => setIvrTime(e.target.value)}
+                  className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 text-gray-800 text-sm lg:text-base focus:outline-none focus:border-sedo-green" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <button onClick={saveIvrConfig} disabled={ivrSaving}
+                className="py-3 bg-sedo-green text-white rounded-xl text-sm font-bold disabled:opacity-60 flex items-center justify-center gap-2">
+                {ivrSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Sauvegarder
+              </button>
+              <button onClick={callNow} disabled={ivrCalling || !ivrPhone}
+                className="py-3 bg-blue-600 text-white rounded-xl text-sm font-bold disabled:opacity-60 flex items-center justify-center gap-2">
+                {ivrCalling ? <Loader2 className="w-4 h-4 animate-spin" /> : <PhoneCall className="w-4 h-4" />}
+                Tester maintenant
+              </button>
+            </div>
+          </div>
+
+          {/* Explication du flux */}
+          <div className="bg-green-50 rounded-2xl p-4 lg:p-5 border border-green-100">
+            <p className="text-xs lg:text-sm font-bold text-sedo-green mb-3">Comment ça fonctionne</p>
+            {[
+              { icon: '📞', text: 'SEDO appelle automatiquement le numéro configuré à l\'heure choisie' },
+              { icon: '🗣️', text: 'L\'employeur décroche et répond vocalement aux questions en français ou Fon' },
+              { icon: '💰', text: 'Les ventes et dépenses du jour sont automatiquement enregistrées' },
+              { icon: '📊', text: 'Le score de finançabilité est mis à jour en temps réel' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-start gap-3 py-2 border-b border-green-100 last:border-0">
+                <span className="text-base">{item.icon}</span>
+                <p className="text-xs lg:text-sm text-green-800">{item.text}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Historique des sessions */}
+          {ivrSessions.length > 0 && (
+            <div className="bg-white rounded-2xl p-4 lg:p-5 shadow-sm border border-gray-100">
+              <p className="text-sm font-bold text-gray-800 mb-3">Historique des appels</p>
+              <div className="space-y-2">
+                {ivrSessions.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      {s.status === 'completed'
+                        ? <CheckCircle2 className="w-4 h-4 text-sedo-green" />
+                        : s.status === 'expired'
+                        ? <XCircle className="w-4 h-4 text-red-400" />
+                        : <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />}
+                      <div>
+                        <p className="text-xs font-semibold text-gray-700 capitalize">{s.status}</p>
+                        <p className="text-[10px] text-gray-400">{new Date(s.createdAt).toLocaleString('fr-FR')}</p>
+                      </div>
+                    </div>
+                    {s.status === 'completed' && (
+                      <div className="text-right">
+                        <p className="text-xs text-sedo-green font-bold">+{(s.venteAmount || 0).toLocaleString('fr-FR')} F</p>
+                        <p className="text-xs text-red-400 font-bold">-{(s.depenseAmount || 0).toLocaleString('fr-FR')} F</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

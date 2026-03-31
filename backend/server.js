@@ -11,6 +11,8 @@ const financementRoutes = require('./routes/financement');
 const imfRoutes = require('./routes/imf');
 const sttRoutes = require('./routes/stt');
 const sectorsRoutes = require('./routes/sectors');
+const ivrRoutes = require('./routes/ivr');
+const { startIVRScheduler } = require('./services/ivr-scheduler');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -32,6 +34,7 @@ app.use('/api/financement', financementRoutes);
 app.use('/api/imf', imfRoutes);
 app.use('/api/stt', sttRoutes);
 app.use('/api/sectors', sectorsRoutes);
+app.use('/api/ivr', ivrRoutes);
 
 // 404
 app.use((req, res) => res.status(404).json({ error: 'Route introuvable' }));
@@ -44,6 +47,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 SEDO Backend démarré sur http://localhost:${PORT}`);
+  startIVRScheduler();
   console.log(`📊 Environnement : ${process.env.NODE_ENV}`);
   console.log(`🔑 JWT_SECRET: ${process.env.JWT_SECRET ? 'OK' : 'MANQUANT'}`);
 });
