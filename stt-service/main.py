@@ -20,7 +20,7 @@ app.add_middleware(
 # ─────────────────────────────────────────────
 # Chargement Whisper fine-tuné Fon
 # ─────────────────────────────────────────────
-FON_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'whisper-small-fon')
+FON_MODEL_PATH = os.environ.get("FON_MODEL_PATH", os.path.join(os.path.dirname(__file__), 'whisper-small-fon'))
 
 print("Chargement du modele Whisper Fon...")
 whisper_processor = WhisperProcessor.from_pretrained(FON_MODEL_PATH)
