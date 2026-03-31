@@ -120,6 +120,9 @@ function SpotlightOverlay({ targetSelector }) {
   );
 }
 
+const isMobile = window.matchMedia('(max-width: 1024px)').matches
+  || window.matchMedia('(display-mode: standalone)').matches;
+
 export function VoiceGuideProvider({ children }) {
   const { user } = useAuth();
   const location = useLocation();
@@ -139,8 +142,9 @@ export function VoiceGuideProvider({ children }) {
     audio.onerror = () => setSpeaking(false);
   }, []);
 
-  // Démarrage automatique
+  // Démarrage automatique — mobile uniquement
   useEffect(() => {
+    if (!isMobile) return;
     if (!user || user.role !== 'mpme') return;
     if (localStorage.getItem(`sedo_guide_done_${user.id}`)) return;
     if (step !== null) return;
