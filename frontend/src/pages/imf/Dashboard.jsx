@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { CheckCircle, ClipboardList, Users, Award, TrendingUp } from 'lucide-react';
 
 export default function IMFDashboard() {
   const { data: stats, isLoading } = useQuery({
@@ -14,10 +15,10 @@ export default function IMFDashboard() {
   );
 
   const cards = [
-    { icon: '✅', label: 'MPME éligibles', value: stats?.eligible ?? 0, sub: `${stats?.tauxEligibilite ?? 0}% du total`, color: 'green' },
-    { icon: '📋', label: 'En progression', value: stats?.enProgression ?? 0, sub: 'Score 31–74', color: 'blue' },
-    { icon: '👥', label: 'MPME totales', value: stats?.total ?? 0, sub: 'Sur la plateforme', color: 'purple' },
-    { icon: '💯', label: 'Score moyen', value: `${stats?.scoresMoyen ?? 0}/100`, sub: 'Toutes MPME', color: 'teal' },
+    { Icon: CheckCircle, label: 'MPME éligibles', value: stats?.eligible ?? 0, sub: `${stats?.tauxEligibilite ?? 0}% du total`, color: 'green' },
+    { Icon: ClipboardList, label: 'En progression', value: stats?.enProgression ?? 0, sub: 'Score 31–74', color: 'blue' },
+    { Icon: Users, label: 'MPME totales', value: stats?.total ?? 0, sub: 'Sur la plateforme', color: 'purple' },
+    { Icon: Award, label: 'Score moyen', value: `${stats?.scoresMoyen ?? 0}/100`, sub: 'Toutes MPME', color: 'teal' },
   ];
 
   const colorMap = {
@@ -53,7 +54,7 @@ export default function IMFDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
         {cards.map((s) => (
           <div key={s.label} className="bg-white rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100">
-            <span className="text-2xl lg:text-3xl">{s.icon}</span>
+            <s.Icon className={`w-6 h-6 lg:w-7 lg:h-7 ${colorMap[s.color].replace('bg-', 'text-').replace('-50', '-600')}`} />
             <p className="font-black text-gray-900 text-xl lg:text-3xl mt-2">{s.value}</p>
             <p className="text-[10px] lg:text-xs text-gray-400 mt-0.5">{s.label}</p>
             <p className={`text-[10px] lg:text-xs mt-2 px-2 py-0.5 rounded-full inline-block font-medium ${colorMap[s.color]}`}>{s.sub}</p>
@@ -64,7 +65,7 @@ export default function IMFDashboard() {
       {/* Graphique évolution */}
       {evolution.length > 0 && (
         <div className="bg-white rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-sm lg:text-base text-gray-800 mb-4 lg:mb-6">📈 Évolution du portefeuille — 6 mois</h3>
+          <h3 className="font-bold text-sm lg:text-base text-gray-800 mb-4 lg:mb-6 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-sedo-blue" /> Évolution du portefeuille — 6 mois</h3>
           <div className="flex items-end gap-2 lg:gap-4 h-28 lg:h-48">
             {evolution.map((e, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1">

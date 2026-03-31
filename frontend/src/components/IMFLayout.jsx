@@ -3,13 +3,14 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { LayoutDashboard, Users, TrendingUp, Bell, User, LogOut } from 'lucide-react';
 
 const tabs = [
-  { path: '/imf', label: 'Dashboard', icon: '📊', exact: true },
-  { path: '/imf/mpme', label: 'MPME', icon: '👥' },
-  { path: '/imf/rapports', label: 'Rapports', icon: '📈' },
-  { path: '/imf/alertes', label: 'Alertes', icon: '🔔' },
-  { path: '/imf/profil', label: 'Profil', icon: '👤' },
+  { path: '/imf', label: 'Dashboard', Icon: LayoutDashboard, exact: true },
+  { path: '/imf/mpme', label: 'MPME', Icon: Users },
+  { path: '/imf/rapports', label: 'Rapports', Icon: TrendingUp },
+  { path: '/imf/alertes', label: 'Alertes', Icon: Bell },
+  { path: '/imf/profil', label: 'Profil', Icon: User },
 ];
 
 const pageTitles = {
@@ -57,7 +58,7 @@ export default function IMFLayout() {
                 `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
                   isActive ? 'bg-blue-50 text-sedo-blue' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
                 }`}>
-              <span className="text-xl">{tab.icon}</span>
+              <tab.Icon className="w-5 h-5 flex-shrink-0" />
               <span className="text-base">{tab.label}</span>
             </NavLink>
           ))}
@@ -114,11 +115,11 @@ export default function IMFLayout() {
                 </div>
                 <NavLink to="/imf/profil" onClick={() => setTopbarMenu(false)}
                   className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50">
-                  👤 Mon profil
+                  <User className="w-4 h-4" /> Mon profil
                 </NavLink>
                 <button onClick={logout}
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50">
-                  🚪 Se déconnecter
+                  <LogOut className="w-4 h-4" /> Se déconnecter
                 </button>
               </div>
             )}
@@ -139,7 +140,7 @@ export default function IMFLayout() {
               `flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors ${isActive ? 'text-sedo-blue' : 'text-gray-400'}`}>
             {({ isActive }) => (
               <>
-                <span className={`text-xl transition-transform ${isActive ? 'scale-110' : ''}`}>{tab.icon}</span>
+                <tab.Icon className={`w-5 h-5 transition-transform ${isActive ? 'scale-110' : ''}`} />
                 <span className={`text-[10px] font-medium ${isActive ? 'text-sedo-blue' : 'text-gray-400'}`}>{tab.label}</span>
                 {isActive && <div className="w-1 h-1 bg-sedo-blue rounded-full mt-0.5" />}
               </>

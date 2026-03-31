@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { formatFCFA, scoreLevel } from '@/lib/utils';
+import { Wallet, TrendingDown, Smartphone, FileText, Zap, Plus, Award, Briefcase, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function MPMEDashboard() {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ export default function MPMEDashboard() {
           </div>
         </div>
         <div className="mt-3 bg-white/10 rounded-xl p-3 lg:p-4">
-          <p className="text-xs lg:text-sm text-green-100">🔄 Zéro effort — Mobile Money synchronisé automatiquement</p>
+          <p className="text-xs lg:text-sm text-green-100 flex items-center gap-1.5"><RefreshCw className="w-3.5 h-3.5" /> Zéro effort — Mobile Money synchronisé automatiquement</p>
         </div>
       </div>
 
@@ -62,13 +63,13 @@ export default function MPMEDashboard() {
       {stats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
           {[
-            { icon: '💰', label: 'Recettes du mois', value: formatFCFA(stats.recettes), sub: `${stats.evolution >= 0 ? '↑' : '↓'} ${Math.abs(stats.evolution)}% vs mois dernier`, color: 'green' },
-            { icon: '📉', label: 'Dépenses du mois', value: formatFCFA(stats.depenses), sub: `${stats.recettes > 0 ? Math.round((stats.depenses / stats.recettes) * 100) : 0}% des recettes`, color: 'red' },
-            { icon: '📱', label: 'Transactions sync.', value: String(stats.txSync), sub: 'Mobile Money', color: 'blue' },
-            { icon: '📝', label: 'Formalisation', value: `${stats.formalisation}%`, sub: `${stats.formRemaining} étape${stats.formRemaining !== 1 ? 's' : ''} restante${stats.formRemaining !== 1 ? 's' : ''}`, color: 'orange' },
+            { Icon: Wallet, label: 'Recettes du mois', value: formatFCFA(stats.recettes), sub: `${stats.evolution >= 0 ? '↑' : '↓'} ${Math.abs(stats.evolution)}% vs mois dernier`, color: 'green' },
+            { Icon: TrendingDown, label: 'Dépenses du mois', value: formatFCFA(stats.depenses), sub: `${stats.recettes > 0 ? Math.round((stats.depenses / stats.recettes) * 100) : 0}% des recettes`, color: 'red' },
+            { Icon: Smartphone, label: 'Transactions sync.', value: String(stats.txSync), sub: 'Mobile Money', color: 'blue' },
+            { Icon: FileText, label: 'Formalisation', value: `${stats.formalisation}%`, sub: `${stats.formRemaining} étape${stats.formRemaining !== 1 ? 's' : ''} restante${stats.formRemaining !== 1 ? 's' : ''}`, color: 'orange' },
           ].map((s) => (
             <div key={s.label} className="bg-white rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100">
-              <span className="text-2xl lg:text-3xl">{s.icon}</span>
+              <s.Icon className={`w-6 h-6 lg:w-7 lg:h-7 ${s.color === 'green' ? 'text-sedo-green' : s.color === 'red' ? 'text-red-500' : s.color === 'blue' ? 'text-blue-500' : 'text-orange-500'}`} />
               <p className="font-bold text-gray-900 text-sm lg:text-xl mt-2 leading-tight">{s.value}</p>
               <p className="text-[10px] lg:text-xs text-gray-400 mt-1 leading-tight">{s.label}</p>
               <p className={`text-[10px] lg:text-xs mt-1 px-1.5 py-0.5 rounded-full inline-block ${
@@ -83,16 +84,16 @@ export default function MPMEDashboard() {
 
       {/* Quick actions */}
       <div>
-        <h3 className="font-bold text-gray-800 text-sm lg:text-base mb-3">⚡ Actions rapides</h3>
+        <h3 className="font-bold text-gray-800 text-sm lg:text-base mb-3 flex items-center gap-1.5"><Zap className="w-4 h-4 text-yellow-500" /> Actions rapides</h3>
         <div className="grid grid-cols-3 gap-2 lg:gap-4">
           {[
-            { icon: '➕', label: 'Enregistrer', path: '/mpme/comptabilite' },
-            { icon: '💯', label: 'Mon score', path: '/mpme/score' },
-            { icon: '💰', label: 'Financement', path: '/mpme/financement' },
+            { Icon: Plus, label: 'Enregistrer', path: '/mpme/comptabilite', color: 'text-sedo-green' },
+            { Icon: Award, label: 'Mon score', path: '/mpme/score', color: 'text-purple-500' },
+            { Icon: Wallet, label: 'Financement', path: '/mpme/financement', color: 'text-blue-500' },
           ].map((a) => (
             <button key={a.label} onClick={() => navigate(a.path)}
               className="bg-white rounded-2xl p-3 lg:p-6 shadow-sm border border-gray-100 flex flex-col items-center gap-1 lg:gap-3 active:scale-95 transition-transform">
-              <span className="text-2xl lg:text-4xl">{a.icon}</span>
+              <a.Icon className={`w-7 h-7 lg:w-10 lg:h-10 ${a.color}`} />
               <span className="text-[10px] lg:text-sm font-medium text-gray-600">{a.label}</span>
             </button>
           ))}
@@ -101,11 +102,11 @@ export default function MPMEDashboard() {
 
       {/* Opportunités */}
       <div>
-        <h3 className="font-bold text-gray-800 text-sm lg:text-base mb-3">💼 Opportunités de financement</h3>
+        <h3 className="font-bold text-gray-800 text-sm lg:text-base mb-3 flex items-center gap-1.5"><Briefcase className="w-4 h-4 text-sedo-green" /> Opportunités de financement</h3>
         <div className="space-y-2 lg:space-y-3">
           {eligibleOffers.slice(0, 2).map((o) => (
             <div key={o.id} className="bg-white rounded-2xl p-4 lg:p-5 shadow-sm border border-green-100 flex items-start gap-3">
-              <span className="text-xl lg:text-2xl">✅</span>
+              <CheckCircle className="w-5 h-5 text-sedo-green flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="font-bold text-sm lg:text-base text-gray-900">{o.name}</p>
                 <p className="text-xs lg:text-sm text-gray-500 mt-0.5">{formatFCFA(o.maxAmount)} — {o.rate ? `${o.rate}%/an` : 'Non remboursable'}</p>
@@ -114,7 +115,7 @@ export default function MPMEDashboard() {
           ))}
           {offers?.filter((o) => !o.eligible).slice(0, 1).map((o) => (
             <div key={o.id} className="bg-white rounded-2xl p-4 lg:p-5 shadow-sm border border-yellow-100 flex items-start gap-3">
-              <span className="text-xl lg:text-2xl">⚠️</span>
+              <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="font-bold text-sm lg:text-base text-gray-900">{o.name}</p>
                 <p className="text-xs lg:text-sm text-gray-500 mt-0.5">Score requis : {o.minScore}. Vous êtes à {o.gapToEligibility} point{o.gapToEligibility > 1 ? 's' : ''} !</p>

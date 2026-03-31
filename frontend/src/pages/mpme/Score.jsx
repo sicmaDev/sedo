@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { scoreLevel } from '@/lib/utils';
+import { Smartphone, BarChart2, FileText, Target, Award, RefreshCw, Lightbulb } from 'lucide-react';
 
 const criteriaConfig = [
-  { key: 'mobileMoney', icon: '📱', label: 'Mobile Money', pct: 30, desc: 'Régularité et volume des transactions synchronisées' },
-  { key: 'comptabilite', icon: '📊', label: 'Comptabilité', pct: 25, desc: 'Qualité et complétude des données financières' },
-  { key: 'formalisation', icon: '📝', label: 'Formalisation', pct: 25, desc: 'Progression dans les démarches légales (IFU, RCCM...)' },
-  { key: 'profilSectoriel', icon: '🎯', label: 'Profil sectoriel', pct: 20, desc: 'Cohérence du profil avec le secteur d\'activité' },
+  { key: 'mobileMoney', Icon: Smartphone, label: 'Mobile Money', pct: 30, desc: 'Régularité et volume des transactions synchronisées' },
+  { key: 'comptabilite', Icon: BarChart2, label: 'Comptabilité', pct: 25, desc: 'Qualité et complétude des données financières' },
+  { key: 'formalisation', Icon: FileText, label: 'Formalisation', pct: 25, desc: 'Progression dans les démarches légales (IFU, RCCM...)' },
+  { key: 'profilSectoriel', Icon: Target, label: 'Profil sectoriel', pct: 20, desc: 'Cohérence du profil avec le secteur d\'activité' },
 ];
 
 export default function Score() {
@@ -37,7 +38,7 @@ export default function Score() {
       {/* Hero */}
       <div className="bg-gradient-to-br from-sedo-green to-sedo-green-dark rounded-2xl p-6 lg:p-8 text-white flex flex-col lg:flex-row lg:items-center lg:gap-12">
         <div className="flex flex-col items-center lg:items-start">
-          <p className="text-green-100 text-sm lg:text-base mb-3">💯 Score de finançabilité</p>
+          <p className="text-green-100 text-sm lg:text-base mb-3 flex items-center gap-1.5"><Award className="w-4 h-4" /> Score de finançabilité</p>
           <div className="relative w-36 h-36 lg:w-48 lg:h-48">
             <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
               <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="3.5" />
@@ -52,7 +53,7 @@ export default function Score() {
           <span className="mt-3 text-xs lg:text-sm bg-white/20 text-white px-3 py-1 rounded-full font-medium">{level.label}</span>
           <button onClick={() => recalculate()} disabled={isPending}
             className="mt-3 text-xs lg:text-sm text-green-100 underline disabled:opacity-50">
-            {isPending ? 'Calcul en cours...' : '🔄 Recalculer le score'}
+            {isPending ? 'Calcul en cours...' : <span className="flex items-center gap-1"><RefreshCw className="w-3 h-3" /> Recalculer le score</span>}
           </button>
         </div>
 
@@ -85,7 +86,7 @@ export default function Score() {
               <div key={c.key} className="bg-white rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2 lg:gap-3">
-                    <span className="text-xl lg:text-3xl">{c.icon}</span>
+                    <c.Icon className="w-6 h-6 lg:w-8 lg:h-8 text-sedo-green flex-shrink-0" />
                     <div>
                       <p className="font-bold text-sm lg:text-base text-gray-900">{c.label}</p>
                       <p className="text-[10px] lg:text-xs text-gray-400">{c.pct}% du score total</p>
@@ -106,14 +107,14 @@ export default function Score() {
       {/* Recommandation */}
       {score?.recommendation && (
         <div className="bg-green-50 border border-green-200 rounded-2xl p-4 lg:p-6">
-          <p className="text-xs lg:text-sm font-bold text-sedo-green mb-1">💡 Recommandation personnalisée</p>
+          <p className="text-xs lg:text-sm font-bold text-sedo-green mb-1 flex items-center gap-1.5"><Lightbulb className="w-4 h-4" /> Recommandation personnalisée</p>
           <p className="text-xs lg:text-sm text-green-700 leading-relaxed">{score.recommendation}</p>
         </div>
       )}
 
       {/* Niveaux mobile */}
       <div className="lg:hidden bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-        <h3 className="font-bold text-sm text-gray-800 mb-3">📊 Niveaux de maturité</h3>
+        <h3 className="font-bold text-sm text-gray-800 mb-3 flex items-center gap-1.5"><BarChart2 className="w-4 h-4 text-sedo-green" /> Niveaux de maturité</h3>
         <div className="space-y-2">
           {[
             { range: '76 – 100', label: 'Éligible au crédit', color: 'bg-green-100 text-green-700', active: total >= 76 },

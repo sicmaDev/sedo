@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useVoiceGuide } from '@/lib/VoiceGuideContext';
+import { Grid3x3, Mic, Phone, ArrowUpCircle, ArrowDownCircle, Check, Lightbulb, Radio, DollarSign } from 'lucide-react';
 
 const sectors = ['🏪 Commerce', '🐄 Élevage', '🌾 Agriculture', '✂️ Artisanat', '🚗 Transport', '🍽️ Restauration'];
 const LANGS = ['🇫🇷 Français', 'Fon', 'Yoruba', 'Adja'];
@@ -98,10 +99,10 @@ export default function Comptabilite() {
 
       {/* Tabs */}
       <div className="flex bg-white rounded-2xl p-1 shadow-sm border border-gray-100">
-        {[{ id: 'pictogrammes', icon: '🎨', label: 'Pictogrammes' }, { id: 'vocal', icon: '🎙️', label: 'Vocal' }, { id: 'ussd', icon: '📞', label: 'USSD' }].map((t) => (
+        {[{ id: 'pictogrammes', Icon: Grid3x3, label: 'Pictogrammes' }, { id: 'vocal', Icon: Mic, label: 'Vocal' }, { id: 'ussd', Icon: Phone, label: 'USSD' }].map((t) => (
           <button key={t.id} {...(t.id === 'vocal' ? { 'data-guide': 'tab_vocal' } : {})} onClick={() => { setActiveTab(t.id); reportAction?.(t.id === 'vocal' ? 'vocal_tab' : 'wrong_tab'); }}
             className={`flex-1 py-2 lg:py-3 rounded-xl text-xs lg:text-sm font-semibold flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2 transition-all ${activeTab === t.id ? 'bg-sedo-green text-white shadow-sm' : 'text-gray-400'}`}>
-            <span className="lg:text-base">{t.icon}</span><span>{t.label}</span>
+            <t.Icon className="w-4 h-4 lg:w-5 lg:h-5" /><span>{t.label}</span>
           </button>
         ))}
       </div>
@@ -142,10 +143,10 @@ export default function Comptabilite() {
                 <p className="text-sm lg:text-base font-bold text-gray-800">Type — {sector}</p>
               </div>
               <div className="grid grid-cols-2 gap-3 lg:gap-5">
-                {[{ icon: '💰', label: "Entrée d'argent", value: 'entree' }, { icon: '💸', label: "Sortie d'argent", value: 'sortie' }].map((t) => (
+                {[{ Icon: ArrowUpCircle, label: "Entrée d'argent", value: 'entree', color: 'text-sedo-green' }, { Icon: ArrowDownCircle, label: "Sortie d'argent", value: 'sortie', color: 'text-red-500' }].map((t) => (
                   <button key={t.value} onClick={() => { setType(t.value); setStep(3); }}
                     className={`rounded-2xl p-5 lg:p-8 border-2 flex flex-col items-center gap-2 lg:gap-3 transition-all active:scale-95 ${type === t.value ? 'border-sedo-green bg-green-50' : 'border-gray-100 bg-gray-50'}`}>
-                    <span className="text-3xl lg:text-5xl">{t.icon}</span>
+                    <t.Icon className={`w-12 h-12 lg:w-16 lg:h-16 ${t.color}`} />
                     <span className="text-sm lg:text-base font-semibold text-gray-700">{t.label}</span>
                   </button>
                 ))}
@@ -157,11 +158,14 @@ export default function Comptabilite() {
             <div className="bg-white rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100">
               <div className="flex items-center gap-2 mb-4">
                 <button onClick={() => setStep(2)} className="text-gray-400 text-sm lg:text-base">‹</button>
-                <p className="text-sm lg:text-base font-bold text-gray-800">Montant — {type === 'entree' ? '💰 Entrée' : '💸 Sortie'}</p>
+                <p className="text-sm lg:text-base font-bold text-gray-800 flex items-center gap-1.5">
+                  {type === 'entree' ? <ArrowUpCircle className="w-4 h-4 text-sedo-green" /> : <ArrowDownCircle className="w-4 h-4 text-red-500" />}
+                  Montant — {type === 'entree' ? 'Entrée' : 'Sortie'}
+                </p>
               </div>
               <div className="space-y-4 lg:max-w-md">
                 <div>
-                  <label className="text-xs lg:text-sm text-gray-500 font-medium">💵 Montant en FCFA</label>
+                  <label className="text-xs lg:text-sm text-gray-500 font-medium flex items-center gap-1"><DollarSign className="w-3.5 h-3.5" /> Montant en FCFA</label>
                   <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Ex: 15 000" min="0"
                     className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 lg:py-4 text-gray-800 font-bold text-lg lg:text-2xl focus:outline-none focus:border-sedo-green" />
                 </div>
@@ -195,8 +199,8 @@ export default function Comptabilite() {
             </div>
             <div className="flex flex-col items-center gap-4 lg:gap-6 py-4">
               <button data-guide="mic_button" onClick={isListening ? stopListening : startListening}
-                className={`w-20 h-20 lg:w-32 lg:h-32 rounded-full flex items-center justify-center text-3xl lg:text-5xl shadow-lg transition-all ${isListening ? 'bg-red-500 animate-pulse scale-110' : 'bg-sedo-green'}`}>
-                🎤
+                className={`w-20 h-20 lg:w-32 lg:h-32 rounded-full flex items-center justify-center shadow-lg transition-all ${isListening ? 'bg-red-500 animate-pulse scale-110' : 'bg-sedo-green'}`}>
+                <Mic className="w-8 h-8 lg:w-12 lg:h-12 text-white" />
               </button>
               <p className="text-sm lg:text-base text-gray-500 text-center">{isListening ? 'Écoute en cours... Appuyez pour arrêter' : 'Appuyez sur le micro pour commencer'}</p>
               {transcript && (
@@ -219,7 +223,7 @@ export default function Comptabilite() {
             </div>
           </div>
           <div className="bg-green-50 rounded-2xl p-4 lg:p-6">
-            <p className="text-xs lg:text-sm font-bold text-sedo-green mb-2">💡 Exemples de phrases</p>
+            <p className="text-xs lg:text-sm font-bold text-sedo-green mb-2 flex items-center gap-1.5"><Lightbulb className="w-4 h-4" /> Exemples de phrases</p>
             {['"J\'ai reçu 15000 francs pour une vente"', '"J\'ai dépensé 8500 francs pour des marchandises"', '"Entrée de 25000 francs client"'].map((ex) => (
               <p key={ex} className="text-xs lg:text-sm text-green-700 py-2 border-b border-green-100 last:border-0">{ex}</p>
             ))}
@@ -256,7 +260,7 @@ export default function Comptabilite() {
             </div>
           </div>
           <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 lg:p-6">
-            <p className="text-xs lg:text-sm font-bold text-sedo-blue mb-1">📡 USSD via Africa's Talking</p>
+            <p className="text-xs lg:text-sm font-bold text-sedo-blue mb-1 flex items-center gap-1.5"><Radio className="w-4 h-4" /> USSD via Africa's Talking</p>
             <p className="text-xs lg:text-sm text-blue-700">Composez le *123# depuis n'importe quel téléphone, même sans internet.</p>
           </div>
         </div>
