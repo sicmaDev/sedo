@@ -219,7 +219,7 @@ router.get('/', authenticate, requireRole('mpme'), async (req, res) => {
 
 // POST /api/transactions
 router.post('/', authenticate, requireRole('mpme'), async (req, res) => {
-  const { type, amount, category, description, source, date } = req.body;
+  const { type, amount, category, description, source, date, sector } = req.body;
 
   if (!type || !amount) return res.status(400).json({ error: 'Type et montant requis' });
   if (!['entree', 'sortie'].includes(type)) return res.status(400).json({ error: 'Type invalide' });
@@ -237,6 +237,7 @@ router.post('/', authenticate, requireRole('mpme'), async (req, res) => {
         category: category || 'autre',
         description: description || null,
         source: source || 'manuel',
+        sector: sector || null,
         date: date ? new Date(date) : new Date(),
       },
     });

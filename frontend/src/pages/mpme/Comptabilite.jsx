@@ -201,7 +201,9 @@ function FicheComptable() {
                   <p className="text-xs lg:text-sm font-semibold text-gray-800 truncate">
                     {tx.description || (tx.type === 'entree' ? 'Entrée' : 'Sortie')}
                   </p>
-                  <p className="text-[10px] lg:text-xs text-gray-400 capitalize">{tx.category || 'autre'} · {tx.source}</p>
+                  <p className="text-[10px] lg:text-xs text-gray-400 capitalize">
+                    {tx.sector ? `${tx.sector} · ` : ''}{tx.category || 'autre'} · {tx.source}
+                  </p>
                 </div>
                 <p className={`text-sm lg:text-base font-bold flex-shrink-0 ${tx.type === 'entree' ? 'text-sedo-green' : 'text-red-500'}`}>
                   {tx.type === 'entree' ? '+' : '-'}{formatFCFA(tx.amount)}
@@ -291,6 +293,7 @@ export default function Comptabilite() {
       category: sector.includes('Commerce') ? 'vente' : sector.includes('Agriculture') ? 'achat' : 'autre',
       description: desc || `${type === 'entree' ? 'Entrée' : 'Sortie'} — ${sector}`,
       source: 'manuel',
+      sector: sector.replace(/^[^\s]+\s/, ''), // retire l'emoji, ex: "🌾 Agriculture" → "Agriculture"
     });
   };
 
