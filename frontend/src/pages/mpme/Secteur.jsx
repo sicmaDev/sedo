@@ -64,7 +64,7 @@ export default function Secteur() {
         throw new Error('offline');
       }
     },
-    initialData: () => (sector ? getCached(sector) : undefined),
+    initialData: () => getCached(sector) ?? undefined,
     staleTime: CACHE_TTL,
   });
 
