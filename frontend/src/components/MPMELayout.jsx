@@ -3,13 +3,14 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { Home, BarChart2, Award, Wallet, User, LogOut } from 'lucide-react';
+import { Home, BarChart2, Award, Wallet, User, LogOut, BookOpen } from 'lucide-react';
 
 const tabs = [
   { path: '/mpme', label: 'Accueil', Icon: Home, exact: true },
   { path: '/mpme/comptabilite', label: 'Comptabilité', Icon: BarChart2 },
   { path: '/mpme/score', label: 'Score', Icon: Award },
   { path: '/mpme/financement', label: 'Financement', Icon: Wallet },
+  { path: '/mpme/secteur', label: 'Secteur', Icon: BookOpen },
   { path: '/mpme/profil', label: 'Profil', Icon: User },
 ];
 

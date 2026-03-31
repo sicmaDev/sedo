@@ -102,3 +102,17 @@ model IMFProfile {
   institution String
   createdAt   DateTime @default(now())
 }
+
+model SectorSheet {
+  id           String   @id @default(uuid())
+  sector       String   @unique
+  title        String
+  actors       String   // JSON : [{ role, description }]
+  marketPrices String   // JSON : [{ item, price, unit }]
+  trends       String
+  regulation   String
+  tips         String   // JSON : string[]
+  audioFile    String?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+}

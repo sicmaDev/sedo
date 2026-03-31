@@ -10,6 +10,7 @@ const scoreRoutes = require('./routes/score');
 const financementRoutes = require('./routes/financement');
 const imfRoutes = require('./routes/imf');
 const sttRoutes = require('./routes/stt');
+const sectorsRoutes = require('./routes/sectors');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -30,6 +31,7 @@ app.use('/api/score', scoreRoutes);
 app.use('/api/financement', financementRoutes);
 app.use('/api/imf', imfRoutes);
 app.use('/api/stt', sttRoutes);
+app.use('/api/sectors', sectorsRoutes);
 
 // 404
 app.use((req, res) => res.status(404).json({ error: 'Route introuvable' }));
