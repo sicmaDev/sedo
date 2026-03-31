@@ -19,13 +19,22 @@ const STEPS = {
   DONE:             'done',
 };
 
-// Élément cible à encercler pour chaque étape d'attente
+// Élément cible à encercler pour chaque étape d'attente (bloqueur de clics)
 const WAIT_TARGETS = {
   [STEPS.WAIT_COMPTA]:    '[data-guide="nav_compta"]',
   [STEPS.WAIT_VOCAL_TAB]: '[data-guide="tab_vocal"]',
   [STEPS.WAIT_LANG]:      '[data-guide="lang_selector"]',
   [STEPS.WAIT_MIC]:       '[data-guide="mic_button"]',
   [STEPS.WAIT_CONFIRM]:   '[data-guide="confirm_button"]',
+};
+
+// Cible du spotlight pendant l'audio (s'affiche dès le début de la lecture)
+const AUDIO_TARGETS = {
+  [STEPS.WELCOME]:          '[data-guide="nav_compta"]',
+  [STEPS.COMPTA_ARRIVED]:   '[data-guide="tab_vocal"]',
+  [STEPS.VOCAL_TAB_ACTIVE]: '[data-guide="lang_selector"]',
+  [STEPS.LANG_SELECTED]:    '[data-guide="mic_button"]',
+  [STEPS.MIC_STOPPED]:      '[data-guide="confirm_button"]',
 };
 
 // Audio de correction si mauvais clic
@@ -211,15 +220,18 @@ export function VoiceGuideProvider({ children }) {
     setSpeaking(false);
   }, [user]);
 
-  const currentTarget = step ? WAIT_TARGETS[step] : null;
+  // Spotlight visible dès l'audio (AUDIO_TARGETS) + pendant l'attente (WAIT_TARGETS)
+  const spotlightTarget = step ? (WAIT_TARGETS[step] || AUDIO_TARGETS[step]) : null;
+  // Bloqueur de clics uniquement sur les étapes WAIT
+  const blockingTarget = step ? WAIT_TARGETS[step] : null;
   const correctionAudio = step ? CORRECTION_AUDIO[step] : null;
 
-  // Listener global — bloque les clics hors cible
+  // Listener global — bloque les clics hors cible (étapes WAIT uniquement)
   useEffect(() => {
-    if (!currentTarget) return;
+    if (!blockingTarget) return;
 
     const handleClick = (e) => {
-      const el = document.querySelector(currentTarget);
+      const el = document.querySelector(blockingTarget);
       if (!el) return;
       const r = el.getBoundingClientRect();
       const PAD = 20;
@@ -236,14 +248,14 @@ export function VoiceGuideProvider({ children }) {
 
     document.addEventListener('click', handleClick, true);
     return () => document.removeEventListener('click', handleClick, true);
-  }, [currentTarget, correctionAudio, playAudio]);
+  }, [blockingTarget, correctionAudio, playAudio]);
 
   return (
     <VoiceGuideContext.Provider value={{ step, speaking, reportAction }}>
       {children}
 
-      {/* Spotlight overlay — visuel uniquement */}
-      {currentTarget && <SpotlightOverlay targetSelector={currentTarget} />}
+      {/* Spotlight overlay — visible dès l'audio */}
+      {spotlightTarget && <SpotlightOverlay targetSelector={spotlightTarget} />}
 
       {/* Bouton flottant guide */}
       {step !== null && (
