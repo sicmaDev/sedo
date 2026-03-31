@@ -7,6 +7,7 @@ import api from '@/lib/api';
 const tabs = [
   { path: '/mpme', label: 'Accueil', icon: '🏠', exact: true },
   { path: '/mpme/comptabilite', label: 'Comptabilité', icon: '📊' },
+  { path: '/mpme/formalisation', label: 'Formalisation', icon: '📝' },
   { path: '/mpme/score', label: 'Score', icon: '💯' },
   { path: '/mpme/financement', label: 'Financement', icon: '💰' },
   { path: '/mpme/profil', label: 'Profil', icon: '👤' },
@@ -15,6 +16,7 @@ const tabs = [
 const pageTitles = {
   '/mpme': 'Tableau de bord',
   '/mpme/comptabilite': 'Comptabilité',
+  '/mpme/formalisation': 'Formalisation',
   '/mpme/score': 'Score de finançabilité',
   '/mpme/financement': 'Opportunités de financement',
   '/mpme/profil': 'Mon profil',
