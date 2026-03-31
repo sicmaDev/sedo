@@ -1,28 +1,35 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { BookOpen, Users, ShoppingCart, TrendingUp, Scale, Lightbulb, Volume2, VolumeX, WifiOff, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  BookOpen, Users, ShoppingCart, TrendingUp, Scale, Lightbulb,
+  Volume2, VolumeX, WifiOff, RefreshCw, ChevronDown, ChevronUp,
+  Bell, Info, AlertTriangle, Sparkles,
+} from 'lucide-react';
 
 const CACHE_KEY = (sector) => `sedo_sector_${sector}`;
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+const NEWS_CACHE_KEY = (sector) => `sedo_news_${sector}`;
+const NEWS_SEEN_KEY = (sector) => `sedo_news_seen_${sector}`;
+const CACHE_TTL = 24 * 60 * 60 * 1000;   // 24h
+const NEWS_TTL  =  1 * 60 * 60 * 1000;   // 1h
 
-function getCached(sector) {
+function getCached(key, ttl = CACHE_TTL) {
   try {
-    const raw = localStorage.getItem(CACHE_KEY(sector));
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const { data, ts } = JSON.parse(raw);
-    if (Date.now() - ts > CACHE_TTL) return null;
+    if (Date.now() - ts > ttl) return null;
     return data;
   } catch { return null; }
 }
 
-function setCache(sector, data) {
+function setCache(key, data) {
   try {
-    localStorage.setItem(CACHE_KEY(sector), JSON.stringify({ data, ts: Date.now() }));
+    localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
   } catch {}
 }
 
-function Section({ icon: Icon, title, children, color = 'text-sedo-green' }) {
+function Section({ icon: Icon, title, children, color = 'text-sedo-green', badge }) {
   const [open, setOpen] = useState(true);
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -31,6 +38,9 @@ function Section({ icon: Icon, title, children, color = 'text-sedo-green' }) {
         <div className="flex items-center gap-2">
           <Icon className={`w-5 h-5 ${color}`} />
           <h3 className="font-bold text-sm lg:text-base text-gray-800">{title}</h3>
+          {badge > 0 && (
+            <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{badge}</span>
+          )}
         </div>
         {open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
       </button>
@@ -38,6 +48,12 @@ function Section({ icon: Icon, title, children, color = 'text-sedo-green' }) {
     </div>
   );
 }
+
+const NEWS_STYLES = {
+  alerte:      { Icon: AlertTriangle, bg: 'bg-red-50 border-red-100',    text: 'text-red-600',    label: 'Alerte' },
+  opportunite: { Icon: Sparkles,      bg: 'bg-green-50 border-green-100', text: 'text-sedo-green', label: 'Opportunité' },
+  info:        { Icon: Info,          bg: 'bg-blue-50 border-blue-100',   text: 'text-blue-600',   label: 'Info' },
+};
 
 export default function Secteur() {
   const audioRef = useRef(null);
@@ -50,23 +66,53 @@ export default function Secteur() {
 
   const sector = profile?.sector;
 
+  // Fiche sectorielle
   const { data: sheet, isLoading, isError, refetch } = useQuery({
     queryKey: ['sector-sheet', sector],
     enabled: !!sector,
     queryFn: async () => {
       try {
         const res = await api.get(`/sectors/${encodeURIComponent(sector)}/sheet`);
-        setCache(sector, res.data);
+        setCache(CACHE_KEY(sector), res.data);
         return res.data;
       } catch {
-        const cached = getCached(sector);
+        const cached = getCached(CACHE_KEY(sector));
         if (cached) return cached;
         throw new Error('offline');
       }
     },
-    initialData: () => getCached(sector) ?? undefined,
+    initialData: () => getCached(CACHE_KEY(sector)) ?? undefined,
     staleTime: CACHE_TTL,
   });
+
+  // Actualités
+  const { data: news = [] } = useQuery({
+    queryKey: ['sector-news', sector],
+    enabled: !!sector,
+    queryFn: async () => {
+      try {
+        const res = await api.get(`/sectors/${encodeURIComponent(sector)}/news`);
+        setCache(NEWS_CACHE_KEY(sector), res.data);
+        return res.data;
+      } catch {
+        return getCached(NEWS_CACHE_KEY(sector), NEWS_TTL) ?? [];
+      }
+    },
+    initialData: () => getCached(NEWS_CACHE_KEY(sector), NEWS_TTL) ?? undefined,
+    staleTime: NEWS_TTL,
+  });
+
+  // Marquer les actualités comme vues à l'arrivée sur la page
+  useEffect(() => {
+    if (!sector) return;
+    localStorage.setItem(NEWS_SEEN_KEY(sector), new Date().toISOString());
+  }, [sector]);
+
+  // Badge alertes non lues
+  const lastSeen = sector ? localStorage.getItem(NEWS_SEEN_KEY(sector)) : null;
+  const unreadAlerts = news.filter(
+    (n) => n.type === 'alerte' && (!lastSeen || new Date(n.publishedAt) > new Date(lastSeen))
+  ).length;
 
   const toggleAudio = () => {
     if (!sheet?.audioFile) return;
@@ -108,7 +154,7 @@ export default function Secteur() {
             <p className="text-green-100 text-xs lg:text-sm mb-1">Votre secteur</p>
             <h2 className="text-xl lg:text-3xl font-black leading-tight">{sheet.title}</h2>
             <p className="text-green-200 text-xs lg:text-sm mt-2">
-              Dernière mise à jour : {new Date(sheet.updatedAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+              Mise à jour : {new Date(sheet.updatedAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
             </p>
           </div>
           {sheet.audioFile && (
@@ -121,6 +167,30 @@ export default function Secteur() {
           )}
         </div>
       </div>
+
+      {/* Actualités & Alertes */}
+      {news.length > 0 && (
+        <Section icon={Bell} title="Actualités & Alertes" color="text-red-500" badge={unreadAlerts}>
+          <div className="space-y-3">
+            {news.map((item) => {
+              const style = NEWS_STYLES[item.type] || NEWS_STYLES.info;
+              return (
+                <div key={item.id} className={`rounded-xl border p-3 lg:p-4 ${style.bg}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <style.Icon className={`w-4 h-4 flex-shrink-0 ${style.text}`} />
+                    <span className={`text-[10px] lg:text-xs font-bold uppercase tracking-wide ${style.text}`}>{style.label}</span>
+                    <span className="text-[10px] lg:text-xs text-gray-400 ml-auto">
+                      {new Date(item.publishedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-800">{item.title}</p>
+                  <p className="text-xs lg:text-sm text-gray-600 mt-1 leading-relaxed">{item.body}</p>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+      )}
 
       {/* Acteurs */}
       <Section icon={Users} title="Acteurs clés du secteur">
@@ -143,7 +213,9 @@ export default function Secteur() {
           {sheet.marketPrices.map((p, i) => (
             <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
               <p className="text-sm text-gray-700">{p.item}</p>
-              <p className="text-sm font-bold text-blue-600 text-right">{p.price} <span className="font-normal text-gray-400">{p.unit}</span></p>
+              <p className="text-sm font-bold text-blue-600 text-right">
+                {p.price} <span className="font-normal text-gray-400">{p.unit}</span>
+              </p>
             </div>
           ))}
         </div>
@@ -172,8 +244,7 @@ export default function Secteur() {
         </div>
       </Section>
 
-      {/* Badge offline */}
-      {getCached(sector) && (
+      {getCached(CACHE_KEY(sector)) && (
         <div className="flex items-center gap-2 text-xs text-gray-400 justify-center pb-2">
           <WifiOff className="w-3.5 h-3.5" /> Fiche disponible hors-ligne
         </div>

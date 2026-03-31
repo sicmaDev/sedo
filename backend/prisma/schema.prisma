@@ -116,3 +116,15 @@ model SectorSheet {
   updatedAt    DateTime @updatedAt
   createdAt    DateTime @default(now())
 }
+
+model SectorNews {
+  id          String   @id @default(uuid())
+  sector      String?  // null = toutes secteurs
+  title       String
+  body        String
+  type        String   @default("info") // info | alerte | opportunite
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([sector, publishedAt])
+}

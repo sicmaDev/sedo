@@ -39,6 +39,18 @@ export default function MPMELayout() {
     queryFn: () => api.get('/mpme/profile').then((r) => r.data),
   });
 
+  const sector = profile?.sector;
+  const { data: sectorAlerts = 0 } = useQuery({
+    queryKey: ['sector-alerts', sector],
+    enabled: !!sector,
+    queryFn: async () => {
+      const seen = localStorage.getItem(`sedo_news_seen_${sector}`) || new Date(0).toISOString();
+      const res = await api.get(`/sectors/${encodeURIComponent(sector)}/news/alerts?since=${seen}`);
+      return res.data.count;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
 
@@ -65,7 +77,12 @@ export default function MPMELayout() {
                 `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
                   isActive ? 'bg-green-50 text-sedo-green' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
                 }`}>
-              <tab.Icon className="w-5 h-5 flex-shrink-0" />
+              <div className="relative flex-shrink-0">
+                <tab.Icon className="w-5 h-5" />
+                {tab.path === '/mpme/secteur' && sectorAlerts > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </div>
               <span className="text-base">{tab.label}</span>
             </NavLink>
           ))}
@@ -148,7 +165,12 @@ export default function MPMELayout() {
               `flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors ${isActive ? 'text-sedo-green' : 'text-gray-400'}`}>
             {({ isActive }) => (
               <>
-                <tab.Icon className={`w-5 h-5 transition-transform ${isActive ? 'scale-110' : ''}`} />
+                <div className="relative">
+                  <tab.Icon className={`w-5 h-5 transition-transform ${isActive ? 'scale-110' : ''}`} />
+                  {tab.path === '/mpme/secteur' && sectorAlerts > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                  )}
+                </div>
                 <span className={`text-[10px] font-medium ${isActive ? 'text-sedo-green' : 'text-gray-400'}`}>{tab.label}</span>
                 {isActive && <div className="w-1 h-1 bg-sedo-green rounded-full mt-0.5" />}
               </>

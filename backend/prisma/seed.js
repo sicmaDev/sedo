@@ -329,6 +329,140 @@ async function main() {
     });
   }
 
+  // --- Actualités sectorielles ---
+  const news = [
+    // Globales (toutes secteurs)
+    {
+      sector: null,
+      title: 'Nouveau : IFU gratuit pour les MPME en 2026',
+      body: 'Le gouvernement béninois a annoncé la gratuité de l\'IFU pour toutes les MPME ayant un chiffre d\'affaires inférieur à 30 millions FCFA. Rendez-vous à la Direction des Impôts la plus proche muni de votre CNI.',
+      type: 'alerte',
+      publishedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    },
+    {
+      sector: null,
+      title: 'SEDO : mise à jour des fiches sectorielles de mars 2026',
+      body: 'Les prix du marché et les informations réglementaires de toutes les fiches sectorielles ont été actualisés pour le mois de mars 2026.',
+      type: 'info',
+      publishedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+    },
+    {
+      sector: null,
+      title: 'Appel à projets ADPME — Clôture le 30 avril 2026',
+      body: 'L\'Agence de Développement des PME lance un appel à projets doté de 500 millions FCFA pour les MPME formalisées. Score SEDO minimum requis : 70/100.',
+      type: 'opportunite',
+      publishedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    },
+    // Commerce général
+    {
+      sector: 'Commerce général',
+      title: 'Hausse des prix du riz importé (+8%) en mars 2026',
+      body: 'Suite aux perturbations logistiques au port de Cotonou, le prix du sac de riz (50 kg) a augmenté de 8%. Anticipez vos achats groupés avant la prochaine livraison de stock.',
+      type: 'alerte',
+      publishedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    },
+    {
+      sector: 'Commerce général',
+      title: 'Marché de Dantokpa : nouvelles horaires de livraison fournisseurs',
+      body: 'À partir du 1er avril 2026, les livraisons de gros au marché Dantokpa se feront uniquement entre 5h et 9h du matin. Adaptez votre organisation en conséquence.',
+      type: 'info',
+      publishedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+    },
+    {
+      sector: 'Commerce général',
+      title: 'MTN MoMo : frais de retrait réduits pour les commerçants',
+      body: 'MTN Bénin annonce une réduction de 30% des frais de retrait pour les commerçants enregistrés. Présentez votre IFU à l\'agence MTN pour bénéficier du tarif préférentiel.',
+      type: 'opportunite',
+      publishedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    },
+    // Agriculture
+    {
+      sector: 'Agriculture',
+      title: 'Alerte sécheresse : zone Sud-Bénin — prévoir irrigation',
+      body: 'La météo nationale prévoit un déficit pluviométrique de 40% sur la zone côtière en avril 2026. Les cultures maraîchères sont particulièrement exposées. Stockez l\'eau dès maintenant.',
+      type: 'alerte',
+      publishedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    },
+    {
+      sector: 'Agriculture',
+      title: 'Subvention intrants agricoles SONAPRA — inscriptions ouvertes',
+      body: 'La SONAPRA ouvre les inscriptions pour la subvention engrais 2026. Les coopératives et agriculteurs individuels peuvent s\'inscrire jusqu\'au 15 avril. Apportez votre carte IFU.',
+      type: 'opportunite',
+      publishedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+    },
+    {
+      sector: 'Agriculture',
+      title: 'Prix du maïs en hausse de 15% sur les marchés du Nord',
+      body: 'La demande pour l\'exportation vers le Nigeria a fait grimper le prix du maïs. Bonne nouvelle pour les producteurs : envisagez de retenir votre stock quelques semaines encore.',
+      type: 'info',
+      publishedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+    },
+    // Artisanat
+    {
+      sector: 'Artisanat',
+      title: 'Salon de l\'Artisanat de Cotonou — appel aux exposants',
+      body: 'Le Salon National de l\'Artisanat se tient du 20 au 25 mai 2026 au Palais des Congrès. Les artisans peuvent s\'inscrire gratuitement sur présentation de leur carte d\'artisan.',
+      type: 'opportunite',
+      publishedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    },
+    {
+      sector: 'Artisanat',
+      title: 'Formation numérique pour artisans — ONFP Cotonou',
+      body: 'L\'ONFP propose une formation gratuite de 3 jours sur la vente en ligne (Facebook, WhatsApp Business) pour les artisans. Inscriptions à l\'ONFP de Jéricho avant le 10 avril.',
+      type: 'info',
+      publishedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+    },
+    // Élevage
+    {
+      sector: 'Élevage',
+      title: 'Alerte grippe aviaire — mesures de prévention obligatoires',
+      body: 'Un foyer de grippe aviaire H5N1 a été détecté dans la région de l\'Atlantique. La Direction de l\'Élevage recommande la vaccination d\'urgence et l\'isolement des nouveaux lots.',
+      type: 'alerte',
+      publishedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    },
+    {
+      sector: 'Élevage',
+      title: 'Hausse de la demande en volaille pour les fêtes de Pâques',
+      body: 'La demande en poulets de chair augmente de 40% en avril pour les fêtes. Planifiez vos lots maintenant pour être prêt à livrer à temps aux restaurants et boucheries.',
+      type: 'opportunite',
+      publishedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+    },
+    // Transport
+    {
+      sector: 'Transport',
+      title: 'Nouvelle réglementation zémidjan — badge obligatoire dès mai 2026',
+      body: 'La Mairie de Cotonou rend obligatoire le nouveau badge électronique pour tous les zémidjans à partir du 1er mai 2026. Enregistrez-vous dès maintenant à la Mairie (gratuit jusqu\'au 15 avril).',
+      type: 'alerte',
+      publishedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    },
+    {
+      sector: 'Transport',
+      title: 'Gozem recrute 500 conducteurs partenaires à Cotonou',
+      body: 'La plateforme Gozem lance une campagne de recrutement. Conditions : moto en bon état, permis A valide, smartphone Android. Commission réduite à 15% les 3 premiers mois.',
+      type: 'opportunite',
+      publishedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+    },
+    // Restauration
+    {
+      sector: 'Restauration',
+      title: 'Contrôle d\'hygiène renforcé dans les restaurants de Cotonou',
+      body: 'La Direction de l\'Hygiène annonce une campagne de contrôles inopinés en avril 2026. Assurez-vous que vos carnets de santé du personnel sont à jour et votre cuisine conforme aux normes.',
+      type: 'alerte',
+      publishedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+    },
+    {
+      sector: 'Restauration',
+      title: 'Forte demande traiteur pour les mariages de la saison sèche',
+      body: 'Avril-juin est la haute saison des cérémonies au Bénin. Les restaurateurs proposant des services traiteur voient leur chiffre d\'affaires doubler. Pensez à vous organiser à l\'avance.',
+      type: 'opportunite',
+      publishedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    },
+  ];
+
+  for (const item of news) {
+    await prisma.sectorNews.create({ data: item });
+  }
+
   console.log('✅ Seed terminé !');
   console.log('');
   console.log('Comptes de démo :');
