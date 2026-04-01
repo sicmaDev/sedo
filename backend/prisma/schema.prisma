@@ -53,6 +53,7 @@ model Transaction {
   category    String   @default("autre") // vente | achat | depense | stock | autre
   description String?
   source      String   @default("manuel") // manuel | mobile_money
+  sector      String?  // secteur choisi lors de la saisie pictogramme
   date        DateTime @default(now())
 
   createdAt   DateTime @default(now())

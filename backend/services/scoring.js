@@ -2,12 +2,12 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 /**
- * Calcule et sauvegarde le score de finançabilité d'une MPME
- * Pondération :
- *   - Mobile Money   : 30%
- *   - Comptabilité   : 25%
- *   - Formalisation  : 25%
- *   - Profil secteur : 20%
+ * Calcule et sauvegarde le Score de Finançabilité
+ * CDC SEDO — Pondération :
+ *   - Mobile Money   : 30% (régularité + volume MoMo/Moov sur 6 mois)
+ *   - Comptabilité   : 25% (régularité des saisies = semaines actives / 24)
+ *   - Formalisation  : 25% (IFU 40pts + RCCM 35pts + NPI 25pts)
+ *   - Profil secteur : 20% (complétude du profil)
  */
 async function calculateScore(mpmeId) {
   const profile = await prisma.mPMEProfile.findUnique({
@@ -15,7 +15,7 @@ async function calculateScore(mpmeId) {
     include: {
       transactions: {
         orderBy: { date: 'desc' },
-        take: 500,
+        take: 1000,
       },
     },
   });
@@ -25,51 +25,49 @@ async function calculateScore(mpmeId) {
   const txAll = profile.transactions;
   const now = new Date();
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+  const txRecentes = txAll.filter((t) => new Date(t.date) >= sixMonthsAgo);
 
-  // --- 1. Score Mobile Money (30%) ---
-  // Basé sur : volume des transactions sync Mobile Money sur 6 mois
-  const txMoMo = txAll.filter(
-    (t) => t.source === 'mobile_money' && new Date(t.date) >= sixMonthsAgo
-  );
-  const momoVolume = txMoMo.reduce((sum, t) => sum + t.amount, 0);
+  // ── 1. Score Mobile Money (30%) ─────────────────────────────────────────
+  // CDC : régularité + volume des transactions MoMo/Moov sur 6 mois
+  const txMoMo = txRecentes.filter((t) => t.source === 'mobile_money');
   const momoCount = txMoMo.length;
-  // Cibles : 100 transactions et 5 000 000 FCFA = score max
-  const momoByCount = Math.min(100, (momoCount / 100) * 100);
-  const momoByVolume = Math.min(100, (momoVolume / 5000000) * 100);
-  const mobileMoney = Math.round((momoByCount * 0.6 + momoByVolume * 0.4));
+  const momoVolume = txMoMo.reduce((sum, t) => sum + t.amount, 0);
 
-  // --- 2. Score Comptabilité (25%) ---
-  // Basé sur : régularité des saisies sur 6 mois (au moins 1 saisie par semaine = 24 semaines)
-  const txManuel = txAll.filter(
-    (t) => t.source === 'manuel' && new Date(t.date) >= sixMonthsAgo
-  );
-  const totalTx = txAll.filter((t) => new Date(t.date) >= sixMonthsAgo).length;
-  // Score basé sur la complétude (cible : 80 transactions sur 6 mois)
+  // Régularité MoMo : semaines avec au moins 1 transaction MoMo (cible 24)
+  const momoWeeks = new Set(txMoMo.map((t) => isoWeek(t.date))).size;
+  const momoRegularite = Math.min(100, (momoWeeks / 24) * 100);
+  // Volume MoMo : cible 5 000 000 FCFA sur 6 mois
+  const momoVolumeScore = Math.min(100, (momoVolume / 5_000_000) * 100);
+  const mobileMoney = Math.round(momoRegularite * 0.6 + momoVolumeScore * 0.4);
+
+  // ── 2. Score Comptabilité (25%) ──────────────────────────────────────────
+  // CDC : "Régularité des saisies, complétude des données Module 2"
+  // = semaines avec au moins 1 saisie (toutes sources) sur 6 mois, cible 24 semaines
+  const totalTx = txRecentes.length;
+  const weeksWithEntry = new Set(txRecentes.map((t) => isoWeek(t.date))).size;
+
+  const regularite = Math.min(100, (weeksWithEntry / 24) * 100);
+  // Complétude : volume de données (cible 80 transactions = bonus)
   const completude = Math.min(100, (totalTx / 80) * 100);
-  // Bonus si transactions manuelles aussi saisies
-  const manuelBonus = Math.min(20, txManuel.length * 0.5);
-  const comptabilite = Math.round(Math.min(100, completude * 0.9 + manuelBonus));
+  const comptabilite = Math.round(regularite * 0.7 + completude * 0.3);
 
-  // --- 3. Score Formalisation (25%) ---
-  // IFU : 40 pts max | RCCM : 35 pts max | NPI : 25 pts max
-  const ifuScore =
-    profile.ifuStatus === 'Complet' ? 40 : profile.ifuStatus === 'En cours' ? 20 : 0;
-  const rccmScore =
-    profile.rccmStatus === 'Complet' ? 35 : profile.rccmStatus === 'En cours' ? 15 : 0;
-  const npiScore =
-    profile.npiStatus === 'Complet' ? 25 : profile.npiStatus === 'En cours' ? 10 : 0;
+  // ── 3. Score Formalisation (25%) ─────────────────────────────────────────
+  // CDC : IFU (40pts) + RCCM (35pts) + NPI (25pts)
+  const ifuScore = profile.ifuStatus === 'Complet' ? 40 : profile.ifuStatus === 'En cours' ? 20 : 0;
+  const rccmScore = profile.rccmStatus === 'Complet' ? 35 : profile.rccmStatus === 'En cours' ? 15 : 0;
+  const npiScore = profile.npiStatus === 'Complet' ? 25 : profile.npiStatus === 'En cours' ? 10 : 0;
   const formalisation = ifuScore + rccmScore + npiScore;
 
-  // --- 4. Score Profil Sectoriel (20%) ---
-  // Basé sur : complétude du profil
+  // ── 4. Score Profil Sectoriel (20%) ──────────────────────────────────────
+  // CDC : complétude du profil + connaissance du secteur (Module 1)
   let profilSectoriel = 0;
   if (profile.sector) profilSectoriel += 30;
-  if (profile.company) profilSectoriel += 20;
+  if (profile.businessName || profile.company) profilSectoriel += 20;
   if (profile.location) profilSectoriel += 15;
   if (profile.employees > 0) profilSectoriel += 15;
   if (profile.createdYear) profilSectoriel += 20;
 
-  // --- Score total pondéré ---
+  // ── Score total pondéré ───────────────────────────────────────────────────
   const total =
     mobileMoney * 0.30 +
     comptabilite * 0.25 +
@@ -78,13 +76,23 @@ async function calculateScore(mpmeId) {
 
   const totalRounded = Math.round(total);
 
-  // --- Recommandation personnalisée ---
+  // ── Alerte 6 mois → formalisation ────────────────────────────────────────
+  // CDC : après 6 mois d'activité enregistrée, déclencher l'alerte formalisation
+  const moisActifs = new Set(
+    txRecentes.map((t) => {
+      const d = new Date(t.date);
+      return `${d.getFullYear()}-${d.getMonth()}`;
+    })
+  ).size;
+  const alerteFormalisation = moisActifs >= 6 && formalisation < 100;
+
+  // ── Recommandation prescriptive (CDC) ─────────────────────────────────────
   const recommendation = buildRecommendation({
     totalRounded, mobileMoney, comptabilite, formalisation, profilSectoriel,
-    momoCount, totalTx, profile,
+    momoCount, momoWeeks, totalTx, weeksWithEntry, moisActifs, profile,
   });
 
-  // Sauvegarde
+  // ── Sauvegarde ────────────────────────────────────────────────────────────
   const score = await prisma.score.create({
     data: {
       mpmeId,
@@ -97,36 +105,122 @@ async function calculateScore(mpmeId) {
     },
   });
 
-  return score;
+  return { ...score, alerteFormalisation, moisActifs, weeksWithEntry, momoWeeks };
 }
 
-function buildRecommendation({ totalRounded, mobileMoney, comptabilite, formalisation, profilSectoriel, momoCount, totalTx, profile }) {
-  const gaps = [];
+/**
+ * Recommandation prescriptive — conforme au CDC SEDO
+ * Exemple CDC : "Il vous manque 3 semaines de transactions et votre RCCM pour passer à 87/100"
+ */
+function buildRecommendation({ totalRounded, mobileMoney, comptabilite, profilSectoriel,
+  momoCount, momoWeeks, weeksWithEntry, profile }) {
 
-  if (mobileMoney < 60) {
-    gaps.push(`Synchronisez plus de transactions Mobile Money (actuellement ${momoCount} sur 6 mois, cible : 100)`);
+  // Calculer le score potentiel si les lacunes principales sont comblées
+  const potMoMo = Math.max(mobileMoney, momoWeeks >= 4 ? 30 : mobileMoney);
+  const potCompta = weeksWithEntry >= 20 ? 85 : Math.min(100, comptabilite + (24 - weeksWithEntry) * 2.9);
+  const potIFU = profile.ifuStatus !== 'Complet' ? 40 : ifuVal(profile.ifuStatus);
+  const potRCCM = profile.rccmStatus !== 'Complet' ? 35 : rccmVal(profile.rccmStatus);
+  const potNPI = profile.npiStatus !== 'Complet' ? 25 : npiVal(profile.npiStatus);
+  const potFormal = Math.min(100, potIFU + potRCCM + potNPI);
+  const potProfil = profile.sector && (profile.businessName || profile.company) && profile.location && profile.employees > 0 && profile.createdYear ? 100 : profilSectoriel;
+
+  const potentialScore = Math.round(
+    potMoMo * 0.30 +
+    potCompta * 0.25 +
+    potFormal * 0.25 +
+    potProfil * 0.20
+  );
+
+  // Actions prioritaires (triées par impact)
+  const actions = [];
+
+  // Comptabilité — priorité si faible régularité
+  if (weeksWithEntry < 24) {
+    const semManquantes = 24 - weeksWithEntry;
+    actions.push({
+      impact: Math.round((semManquantes / 24) * 25),
+      msg: `enregistrer vos transactions pendant encore ${semManquantes} semaine${semManquantes > 1 ? 's' : ''} — vous avez couvert ${weeksWithEntry} semaine${weeksWithEntry > 1 ? 's' : ''} sur 24`,
+    });
   }
-  if (comptabilite < 60) {
-    gaps.push(`Enregistrez vos transactions plus régulièrement (actuellement ${totalTx} sur 6 mois, cible : 80)`);
-  }
+
+  // Formalisation IFU
   if (profile.ifuStatus !== 'Complet') {
-    gaps.push(`Finalisez votre IFU (+${profile.ifuStatus === 'En cours' ? 20 : 40} points potentiels)`);
+    const pts = profile.ifuStatus === 'En cours' ? 20 : 40;
+    actions.push({ impact: Math.round(pts * 0.25), msg: `finaliser votre IFU (+${pts} points de formalisation)` });
   }
+
+  // Formalisation RCCM
   if (profile.rccmStatus !== 'Complet') {
-    gaps.push(`Obtenez votre RCCM (+${profile.rccmStatus === 'En cours' ? 20 : 35} points potentiels)`);
+    const pts = profile.rccmStatus === 'En cours' ? 15 : 35;
+    actions.push({ impact: Math.round(pts * 0.25), msg: `obtenir votre RCCM (+${pts} points de formalisation)` });
   }
 
-  if (gaps.length === 0) {
-    return `Excellent profil ! Score ${totalRounded}/100. Vous êtes éligible à plusieurs offres de financement.`;
+  // Mobile Money
+  if (mobileMoney < 50) {
+    actions.push({
+      impact: 10,
+      msg: `connecter votre compte MTN MoMo ou Moov Money pour la synchronisation automatique (${momoCount} transaction${momoCount !== 1 ? 's' : ''} détectée${momoCount !== 1 ? 's' : ''})`,
+    });
   }
 
-  const needed = Math.max(0, 75 - totalRounded);
+  // Profil
+  if (profilSectoriel < 80) {
+    actions.push({ impact: 5, msg: `compléter votre profil — secteur, effectif, année de démarrage` });
+  }
+
+  // NPI
+  if (profile.npiStatus !== 'Complet') {
+    const pts = profile.npiStatus === 'En cours' ? 10 : 25;
+    actions.push({ impact: Math.round(pts * 0.25), msg: `obtenir votre NPI (+${pts} points de formalisation)` });
+  }
+
+  // Trier par impact décroissant
+  actions.sort((a, b) => b.impact - a.impact);
+
+  if (actions.length === 0) {
+    const accesMsg = totalRounded >= 76
+      ? 'Votre dossier est transmissible aux institutions financières partenaires.'
+      : totalRounded >= 56
+      ? 'Vous êtes en cours de mise en relation avec les IMF partenaires.'
+      : 'Vous accédez aux offres de microfinance et formations.';
+    return `Excellent profil ! Score ${totalRounded}/100. ${accesMsg}`;
+  }
+
+  // Niveau cible selon CDC
+  const niveauCible = totalRounded < 31
+    ? 'la progression (31/100)'
+    : totalRounded < 56
+    ? 'l\'accès microfinance (56/100)'
+    : totalRounded < 76
+    ? 'l\'éligibilité au crédit (76/100)'
+    : 'le score maximal';
+
+  const needed = Math.max(0, (totalRounded < 31 ? 31 : totalRounded < 56 ? 56 : totalRounded < 76 ? 76 : 100) - totalRounded);
+
+  const projMsg = potentialScore > totalRounded + 2
+    ? ` En complétant ces étapes, vous pouvez atteindre ${potentialScore}/100.`
+    : '';
+
   const prefix = needed > 0
-    ? `Il vous manque ${needed} point${needed > 1 ? 's' : ''} pour atteindre l'éligibilité (75/100). `
-    : `Score actuel : ${totalRounded}/100. `;
+    ? `Il vous manque ${needed} point${needed > 1 ? 's' : ''} pour atteindre ${niveauCible}.${projMsg} `
+    : `Score : ${totalRounded}/100.${projMsg} `;
 
-  return prefix + 'Priorités : ' + gaps[0] + '.';
+  const top = actions[0].msg;
+  const second = actions[1] ? ` Ensuite : ${actions[1].msg}.` : '';
+
+  return `${prefix}Priorité : ${top.charAt(0).toUpperCase() + top.slice(1)}.${second}`;
 }
+
+// Helpers notation
+function isoWeek(date) {
+  const d = new Date(date);
+  const startOfYear = new Date(d.getFullYear(), 0, 1);
+  const weekNum = Math.ceil(((d - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+  return `${d.getFullYear()}-W${weekNum}`;
+}
+function ifuVal(s) { return s === 'Complet' ? 40 : s === 'En cours' ? 20 : 0; }
+function rccmVal(s) { return s === 'Complet' ? 35 : s === 'En cours' ? 15 : 0; }
+function npiVal(s) { return s === 'Complet' ? 25 : s === 'En cours' ? 10 : 0; }
 
 /**
  * Récupère le dernier score calculé pour une MPME

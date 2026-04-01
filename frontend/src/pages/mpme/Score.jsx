@@ -104,7 +104,24 @@ export default function Score() {
         </div>
       </div>
 
-      {/* Recommandation */}
+      {/* Alerte formalisation — CDC : après 6 mois d'activité */}
+      {score?.alerteFormalisation && (
+        <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 lg:p-6 flex gap-3 items-start">
+          <span className="text-2xl flex-shrink-0">🎯</span>
+          <div>
+            <p className="text-sm font-bold text-amber-800 mb-1">Vous êtes prêt à vous formaliser !</p>
+            <p className="text-xs lg:text-sm text-amber-700 leading-relaxed">
+              Vous avez enregistré <strong>{score.moisActifs} mois</strong> d'activité sur SEDO.
+              Lancez maintenant votre dossier de formalisation (IFU, RCCM, NPI) pour faire passer votre score à un niveau supérieur et accéder au crédit formel.
+            </p>
+            <a href="/formalisation" className="inline-block mt-2 bg-amber-500 text-white text-xs font-bold px-4 py-2 rounded-xl">
+              Lancer ma formalisation →
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Recommandation prescriptive */}
       {score?.recommendation && (
         <div className="bg-green-50 border border-green-200 rounded-2xl p-4 lg:p-6">
           <p className="text-xs lg:text-sm font-bold text-sedo-green mb-1 flex items-center gap-1.5"><Lightbulb className="w-4 h-4" /> Recommandation personnalisée</p>

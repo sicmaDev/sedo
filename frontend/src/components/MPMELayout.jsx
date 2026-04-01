@@ -3,11 +3,12 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { Home, BarChart2, Award, Wallet, User, LogOut, BookOpen } from 'lucide-react';
+import { Home, BarChart2, Award, Wallet, User, BookOpen, ClipboardList } from 'lucide-react';
 
 const tabs = [
   { path: '/mpme', label: 'Accueil', Icon: Home, exact: true },
   { path: '/mpme/comptabilite', label: 'Comptabilité', Icon: BarChart2 },
+  { path: '/mpme/formalisation', label: 'Formalisation', Icon: ClipboardList },
   { path: '/mpme/score', label: 'Score', Icon: Award },
   { path: '/mpme/financement', label: 'Financement', Icon: Wallet },
   { path: '/mpme/secteur', label: 'Secteur', Icon: BookOpen },
@@ -17,8 +18,10 @@ const tabs = [
 const pageTitles = {
   '/mpme': 'Tableau de bord',
   '/mpme/comptabilite': 'Comptabilité',
+  '/mpme/formalisation': 'Formalisation',
   '/mpme/score': 'Score de finançabilité',
   '/mpme/financement': 'Opportunités de financement',
+  '/mpme/secteur': 'Connaissance Sectorielle',
   '/mpme/profil': 'Mon profil',
 };
 
@@ -139,11 +142,11 @@ export default function MPMELayout() {
                 </div>
                 <NavLink to="/mpme/profil" onClick={() => setTopbarMenu(false)}
                   className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50">
-                  <User className="w-4 h-4" /> Mon profil
+                  👤 Mon profil
                 </NavLink>
                 <button onClick={logout}
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50">
-                  <LogOut className="w-4 h-4" /> Se déconnecter
+                  🚪 Se déconnecter
                 </button>
               </div>
             )}
