@@ -23,7 +23,7 @@ router.post('/transcribe', authenticate, upload.single('audio'), async (req, res
 
     const response = await axios.post(`${process.env.STT_SERVICE_URL}/transcribe`, form, {
       headers: form.getHeaders(),
-      timeout: 30000,
+      timeout: 120000,
     });
 
     res.json(response.data);
