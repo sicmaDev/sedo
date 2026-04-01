@@ -14,6 +14,7 @@ import Score from '@/pages/mpme/Score';
 import Financement from '@/pages/mpme/Financement';
 import Profil from '@/pages/mpme/Profil';
 import Formalisation from '@/pages/mpme/Formalisation';
+import Secteur from '@/pages/mpme/Secteur';
 
 import IMFLayout from '@/components/IMFLayout';
 import IMFDashboard from '@/pages/imf/Dashboard';
@@ -60,6 +61,7 @@ function AppRoutes() {
         <Route path="/mpme/comptabilite" element={<Comptabilite />} />
         <Route path="/mpme/score" element={<Score />} />
         <Route path="/mpme/formalisation" element={<Formalisation />} />
+        <Route path="/mpme/secteur" element={<Secteur />} />
         <Route path="/mpme/financement" element={<Financement />} />
         <Route path="/mpme/profil" element={<Profil />} />
       </Route>
