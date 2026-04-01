@@ -265,7 +265,7 @@ export default function Secteur() {
               <div className="w-2 h-2 rounded-full bg-sedo-green flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-800">{a.role}</p>
-                <p className="text-xs text-gray-500 mt-0.5 truncate">{a.description}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{a.description}</p>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
             </button>

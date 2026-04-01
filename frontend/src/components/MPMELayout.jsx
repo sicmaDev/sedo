@@ -151,7 +151,7 @@ export default function MPMELayout() {
         </div>
 
         {/* Page content */}
-        <main className="flex-1 pb-20 lg:pb-8 lg:px-8 lg:py-6 lg:w-full">
+        <main className="flex-1 pb-20 lg:pb-8 lg:px-8 lg:py-6 lg:w-full overflow-x-hidden">
           <Outlet />
         </main>
       </div>
