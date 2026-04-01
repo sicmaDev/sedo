@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 // POST /api/simulator/save — sauvegarde les transactions issues de l'appel simulé
 router.post('/save', authenticate, requireRole('mpme'), async (req, res) => {
-  const { venteAmount, depenseAmount, sector } = req.body;
+  const { venteAmount, depenseAmount } = req.body;
 
   if (!venteAmount && !depenseAmount) {
     return res.status(400).json({ error: 'Aucun montant fourni' });
@@ -29,7 +29,6 @@ router.post('/save', authenticate, requireRole('mpme'), async (req, res) => {
           category: 'vente',
           description: 'Appel vocal SEDO',
           source: 'ivr',
-          sector: sector || null,
           date: new Date(),
         },
       });
@@ -45,7 +44,6 @@ router.post('/save', authenticate, requireRole('mpme'), async (req, res) => {
           category: 'achat',
           description: 'Appel vocal SEDO',
           source: 'ivr',
-          sector: sector || null,
           date: new Date(),
         },
       });

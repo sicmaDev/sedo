@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/AuthContext';
 import api from '@/lib/api';
@@ -22,6 +23,50 @@ export default function Profil() {
   });
 
   const initial = (user?.fullName || 'K')[0].toUpperCase();
+
+  const [ivrPhone, setIvrPhone] = useState('');
+  const [ivrTime, setIvrTime] = useState('18:00');
+  const [ivrSaving, setIvrSaving] = useState(false);
+  const [ivrCalling, setIvrCalling] = useState(false);
+  const [ivrMsg, setIvrMsg] = useState('');
+
+  // Pré-remplir les champs quand le profil est chargé
+  const { data: ivrProfile } = useQuery({
+    queryKey: ['ivr-profile'],
+    queryFn: () => api.get('/mpme/profile').then((r) => r.data),
+    onSuccess: (d) => {
+      if (d.ivrPhone) setIvrPhone(d.ivrPhone);
+      if (d.ivrTime) setIvrTime(d.ivrTime);
+    },
+  });
+
+  async function saveIvrConfig() {
+    setIvrSaving(true);
+    setIvrMsg('');
+    try {
+      await api.post('/ivr/config', { ivrPhone, ivrTime });
+      setIvrMsg('✅ Configuration enregistrée');
+    } catch {
+      setIvrMsg('❌ Erreur lors de la sauvegarde');
+    } finally {
+      setIvrSaving(false);
+    }
+  }
+
+  async function testCall() {
+    if (!ivrPhone) { setIvrMsg('⚠️ Entrez un numéro de téléphone d\'abord'); return; }
+    setIvrCalling(true);
+    setIvrMsg('📞 Appel en cours...');
+    try {
+      await api.post('/ivr/config', { ivrPhone, ivrTime });
+      const res = await api.post('/ivr/call/now');
+      setIvrMsg(`✅ Appel lancé ! Décroche ton téléphone. (SID: ${res.data.callSid?.slice(0, 16)}...)`);
+    } catch (e) {
+      setIvrMsg(`❌ ${e.response?.data?.error || 'Erreur lors de l\'appel'}`);
+    } finally {
+      setIvrCalling(false);
+    }
+  }
 
   return (
     <div className="px-4 py-5 lg:px-0 lg:py-0 space-y-4 lg:space-y-6">
@@ -107,6 +152,55 @@ export default function Profil() {
               </table>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Appel Vocal IVR */}
+      <div className="bg-white rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100 space-y-4">
+        <h3 className="font-bold text-sm lg:text-base text-gray-800">📞 Appel Vocal Automatique</h3>
+        <p className="text-xs text-gray-400">SEDO appellera ce numéro chaque jour à l'heure choisie pour enregistrer tes ventes et dépenses.</p>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-gray-500 font-medium block mb-1">Numéro de téléphone (format international)</label>
+            <input
+              type="tel"
+              placeholder="+22961000000"
+              value={ivrPhone}
+              onChange={(e) => setIvrPhone(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sedo-green"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-medium block mb-1">Heure d'appel quotidien</label>
+            <input
+              type="time"
+              value={ivrTime}
+              onChange={(e) => setIvrTime(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sedo-green"
+            />
+          </div>
+        </div>
+
+        {ivrMsg && (
+          <p className="text-xs font-medium text-gray-700 bg-gray-50 rounded-lg px-3 py-2">{ivrMsg}</p>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            onClick={saveIvrConfig}
+            disabled={ivrSaving}
+            className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold active:scale-95 transition-transform disabled:opacity-50"
+          >
+            {ivrSaving ? 'Sauvegarde...' : '💾 Sauvegarder'}
+          </button>
+          <button
+            onClick={testCall}
+            disabled={ivrCalling}
+            className="flex-1 py-2.5 bg-sedo-green text-white rounded-xl text-sm font-semibold active:scale-95 transition-transform disabled:opacity-50"
+          >
+            {ivrCalling ? '📞 Appel...' : '📞 Tester maintenant'}
+          </button>
         </div>
       </div>
 
