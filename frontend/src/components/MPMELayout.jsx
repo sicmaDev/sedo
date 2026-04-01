@@ -52,7 +52,7 @@ export default function MPMELayout() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex overflow-x-hidden w-full">
 
       {/* Sidebar desktop */}
       <aside className="hidden lg:flex flex-col w-72 bg-white border-r border-gray-100 fixed top-0 left-0 bottom-0 z-40 shadow-sm">
