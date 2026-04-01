@@ -22,11 +22,18 @@ app.add_middleware(
 # ─────────────────────────────────────────────
 FON_MODEL_PATH = os.environ.get("FON_MODEL_PATH", os.path.join(os.path.dirname(__file__), 'whisper-small-fon'))
 
-print("Chargement du modele Whisper Fon...")
-whisper_processor = WhisperProcessor.from_pretrained(FON_MODEL_PATH)
-whisper_model = WhisperForConditionalGeneration.from_pretrained(FON_MODEL_PATH)
-whisper_model.eval()
-print("Modele Whisper Fon pret")
+whisper_processor = None
+whisper_model = None
+
+def get_model():
+    global whisper_processor, whisper_model
+    if whisper_processor is None:
+        print("Chargement du modele Whisper Fon...")
+        whisper_processor = WhisperProcessor.from_pretrained(FON_MODEL_PATH)
+        whisper_model = WhisperForConditionalGeneration.from_pretrained(FON_MODEL_PATH)
+        whisper_model.eval()
+        print("Modele Whisper Fon pret")
+    return whisper_processor, whisper_model
 
 SEUIL_ENERGIE = 0.03
 
@@ -196,11 +203,12 @@ def transcrire_fon(audio_path: str):
     if rms < SEUIL_ENERGIE:
         return None
 
-    inputs = whisper_processor(audio, sampling_rate=16000, return_tensors="pt")
+    processor, model = get_model()
+    inputs = processor(audio, sampling_rate=16000, return_tensors="pt")
     with torch.no_grad():
-        predicted_ids = whisper_model.generate(inputs.input_features)
+        predicted_ids = model.generate(inputs.input_features)
 
-    transcription = whisper_processor.batch_decode(predicted_ids, skip_special_tokens=True)[0].strip()
+    transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0].strip()
     print(f"Transcription Fon: {transcription}")
     return transcription
 
