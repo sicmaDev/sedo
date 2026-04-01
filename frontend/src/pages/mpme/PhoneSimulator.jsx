@@ -2,6 +2,37 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 
+// URL du service STT
+const STT_URL = import.meta.env.VITE_STT_URL || 'http://localhost:8000';
+
+// ─── Enregistrement audio + envoi à la passerelle Fon ────────────────────────
+async function recordAndTranscribeFon(onStart) {
+  return new Promise((resolve, reject) => {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      const mr = new MediaRecorder(stream);
+      const chunks = [];
+      mr.ondataavailable = (e) => chunks.push(e.data);
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const form = new FormData();
+        form.append('audio', blob, 'fon_audio.webm');
+        try {
+          const res = await fetch(`${STT_URL}/transcribe-fon`, { method: 'POST', body: form });
+          const data = await res.json();
+          resolve(data);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      onStart?.();
+      mr.start();
+      // Arrêt automatique après 6 secondes
+      setTimeout(() => { if (mr.state === 'recording') mr.stop(); }, 6000);
+    }).catch(reject);
+  });
+}
+
 // ─── Machine d'états ─────────────────────────────────────────────────────────
 const STATES = {
   IDLE: 'idle',
@@ -157,9 +188,9 @@ export default function PhoneSimulator() {
     // Sonnerie 3 secondes puis connexion
     setTimeout(() => {
       setPhase(STATES.CONNECTED);
-      addLog('Connecté — Agent SEDO', 'system');
+      addLog('Connecté — Agent SEDO Fon', 'system');
       speak(
-        'Bonjour ! Ici SEDO, votre assistant financier. Nous allons enregistrer vos opérations du jour.',
+        'Mi mɔ wɛ! Un do SEDO dó, mìtɔn nùkún-kpé-tɔ. Mì na d\'akpá nú wɛ e mì wá dó égbé.',
         () => {
           setTimeout(() => askVentes(), 800);
         }
@@ -169,9 +200,9 @@ export default function PhoneSimulator() {
 
   const askVentes = useCallback(() => {
     setPhase(STATES.ASK_VENTES);
-    addLog('Agent : Quel est le montant total de vos ventes aujourd\'hui ?', 'agent');
+    addLog('Agent (Fon) : Akwɛ étɛ wɛ a sɔ́ ná nùɖé égbé ?', 'agent');
     speak(
-      'Première question : quel est le montant total de vos ventes aujourd\'hui ? Dites le montant en francs.',
+      'Akwɛ étɛ wɛ a sɔ́ ná nùɖé égbé ? Ɖɔ xwé ɖé mì.',
       () => setTimeout(() => listenVentes(), 600)
     );
   }, []);
@@ -180,94 +211,57 @@ export default function PhoneSimulator() {
     setPhase(STATES.LISTEN_VENTES);
     setMicActive(true);
     setManualInput('');
+    addLog('🎤 Écoute en cours — parlez en Fon ou tapez le montant...', 'system');
+
+    // Handler saisie manuelle
     setCurrentHandler(() => (text) => {
       setMicActive(false);
       setCurrentHandler(null);
-      recRef.current?.abort?.();
       addLog(`Vous (clavier) : "${text}"`, 'user');
       const montant = extractAmount(text);
       if (montant) {
         setVenteAmount(montant);
         addLog(`Compris : ${montant.toLocaleString('fr-FR')} FCFA`, 'system');
-        speak(`Parfait ! J'ai enregistré ${montant.toLocaleString('fr-FR')} francs de ventes.`,
+        speak(`Ɛ̀ jɛ wɛ ! Un ko yí ${montant.toLocaleString('fr-FR')} dó.`,
           () => setTimeout(() => askDepenses(), 800));
       } else {
         addLog('Montant non compris — réessayez', 'warn');
-        speak('Je n\'ai pas compris. Réessayez.', () => setTimeout(() => listenVentes(), 800));
+        speak('Un mɔ xó ɔ xwé ǎ. Ɖɔ xwé ɖé mì.', () => setTimeout(() => listenVentes(), 800));
       }
     });
-    addLog('En écoute — parlez ou tapez le montant ci-dessous...', 'system');
 
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      addLog('SpeechRecognition non supporté — Chrome recommandé', 'error');
-      setPhase(STATES.ERROR);
-      return;
-    }
-
-    let handled = false;
-    const rec = new SR();
-    rec.lang = 'fr-FR';
-    rec.interimResults = true;
-    rec.continuous = false;
-    rec.maxAlternatives = 5;
-
-    let best = '';
-    rec.onresult = (e) => {
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) best = e.results[i][0].transcript;
-        else if (!best) best = e.results[i][0].transcript;
-      }
-    };
-
-    rec.onend = () => {
-      if (handled) return;
-      handled = true;
-      setMicActive(false);
-      const text = best.trim();
-      if (!text) {
-        addLog('Aucune voix détectée — réessayez', 'warn');
-        speak('Je n\'ai rien entendu. Réessayons.', () => setTimeout(() => listenVentes(), 800));
-        return;
-      }
-      addLog(`Vous : "${text}"`, 'user');
-      const montant = extractAmount(text);
-      if (montant) {
-        setVenteAmount(montant);
-        addLog(`Compris : ${montant.toLocaleString('fr-FR')} FCFA`, 'system');
-        speak(`Parfait ! J'ai enregistré ${montant.toLocaleString('fr-FR')} francs de ventes.`,
-          () => setTimeout(() => askDepenses(), 800));
-      } else {
-        addLog(`"${text}" — montant non compris, réessayez`, 'warn');
-        speak('Je n\'ai pas compris le montant. Dites juste le chiffre, par exemple : cinq mille.',
-          () => setTimeout(() => listenVentes(), 800));
-      }
-    };
-
-    rec.onerror = (e) => {
-      if (handled) return;
-      if (e.error === 'no-speech') {
-        handled = true;
+    // Enregistrement audio → passerelle Fon
+    recordAndTranscribeFon(() => addLog('🔴 Enregistrement démarré (6 sec max)...', 'system'))
+      .then((data) => {
         setMicActive(false);
-        addLog('Aucune voix — réessayez', 'warn');
-        speak('Je n\'ai rien entendu. Réessayons.', () => setTimeout(() => listenVentes(), 800));
-      } else if (e.error !== 'aborted') {
-        handled = true;
+        setCurrentHandler(null);
+        if (data.mode === 'simulation') {
+          addLog(`[Simulation] Fon : "${data.fon_original}"`, 'system');
+        }
+        addLog(`Transcrit : "${data.text}"`, 'user');
+        const montant = data.amount || extractAmount(data.text);
+        if (montant) {
+          setVenteAmount(montant);
+          addLog(`✅ Ventes : ${montant.toLocaleString('fr-FR')} FCFA`, 'success');
+          speak(`Ɛ̀ jɛ wɛ ! Un ko yí ${montant.toLocaleString('fr-FR')} dó.`,
+            () => setTimeout(() => askDepenses(), 800));
+        } else {
+          addLog('Montant non compris — réessayez', 'warn');
+          speak('Un mɔ xó ɔ xwé ǎ. Ɖɔ xwé ɖé mì.', () => setTimeout(() => listenVentes(), 800));
+        }
+      })
+      .catch(() => {
         setMicActive(false);
-        addLog('Erreur microphone : ' + e.error, 'error');
-        setPhase(STATES.ERROR);
-      }
-    };
-
-    recRef.current = rec;
-    rec.start();
+        setCurrentHandler(null);
+        addLog('Erreur enregistrement — tapez le montant', 'warn');
+      });
   }, []);
 
   const askDepenses = useCallback(() => {
     setPhase(STATES.ASK_DEPENSES);
-    addLog('Agent : Quel est le montant total de vos dépenses aujourd\'hui ?', 'agent');
+    addLog('Agent (Fon) : Akwɛ étɛ wɛ a sɔ́ dó nùɖé égbé ?', 'agent');
     speak(
-      'Deuxième question : quel est le montant total de vos dépenses aujourd\'hui ?',
+      'Akwɛ étɛ wɛ a sɔ́ dó nùɖé égbé ? Ɖɔ xwé ɖé mì.',
       () => setTimeout(() => listenDepenses(), 600)
     );
   }, []);
@@ -276,71 +270,38 @@ export default function PhoneSimulator() {
     setPhase(STATES.LISTEN_DEPENSES);
     setMicActive(true);
     setManualInput('');
+    addLog('🎤 Écoute en cours — parlez en Fon ou tapez le montant...', 'system');
+
+    // Handler saisie manuelle
     setCurrentHandler(() => (text) => {
       setMicActive(false);
       setCurrentHandler(null);
-      recRef.current?.abort?.();
       addLog(`Vous (clavier) : "${text}"`, 'user');
       const montant = extractAmount(text) || 0;
       if (montant > 0) addLog(`Compris : ${montant.toLocaleString('fr-FR')} FCFA`, 'system');
       else addLog('Montant non compris — dépenses mises à 0', 'warn');
       doRecap(montant);
     });
-    addLog('En écoute — parlez ou tapez le montant ci-dessous...', 'system');
 
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { setPhase(STATES.ERROR); return; }
-
-    let handled = false;
-    const rec = new SR();
-    rec.lang = 'fr-FR';
-    rec.interimResults = true;
-    rec.continuous = false;
-    rec.maxAlternatives = 5;
-
-    let best = '';
-    rec.onresult = (e) => {
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) best = e.results[i][0].transcript;
-        else if (!best) best = e.results[i][0].transcript;
-      }
-    };
-
-    rec.onend = () => {
-      if (handled) return;
-      handled = true;
-      setMicActive(false);
-      const text = best.trim();
-      if (!text) {
-        addLog('Aucune voix — dépenses mises à 0', 'warn');
-        doRecap(0);
-        return;
-      }
-      addLog(`Vous : "${text}"`, 'user');
-      const montant = extractAmount(text) || 0;
-      if (montant > 0) {
-        addLog(`Compris : ${montant.toLocaleString('fr-FR')} FCFA`, 'system');
-      } else {
-        addLog('Montant non compris — dépenses mises à 0', 'warn');
-      }
-      doRecap(montant);
-    };
-
-    rec.onerror = (e) => {
-      if (handled) return;
-      handled = true;
-      setMicActive(false);
-      if (e.error === 'no-speech') {
-        addLog('Aucune voix — dépenses mises à 0', 'warn');
-        doRecap(0);
-      } else if (e.error !== 'aborted') {
-        addLog('Erreur microphone : ' + e.error, 'error');
-        setPhase(STATES.ERROR);
-      }
-    };
-
-    recRef.current = rec;
-    rec.start();
+    // Enregistrement audio → passerelle Fon
+    recordAndTranscribeFon(() => addLog('🔴 Enregistrement démarré (6 sec max)...', 'system'))
+      .then((data) => {
+        setMicActive(false);
+        setCurrentHandler(null);
+        if (data.mode === 'simulation') {
+          addLog(`[Simulation] Fon : "${data.fon_original}"`, 'system');
+        }
+        addLog(`Transcrit : "${data.text}"`, 'user');
+        const montant = data.amount || extractAmount(data.text) || 0;
+        if (montant > 0) addLog(`✅ Dépenses : ${montant.toLocaleString('fr-FR')} FCFA`, 'success');
+        else addLog('Montant non compris — dépenses mises à 0', 'warn');
+        doRecap(montant);
+      })
+      .catch(() => {
+        setMicActive(false);
+        setCurrentHandler(null);
+        addLog('Erreur enregistrement — tapez le montant', 'warn');
+      });
   }, []);
 
   const doRecap = useCallback((dep) => {

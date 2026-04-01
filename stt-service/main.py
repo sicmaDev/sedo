@@ -8,6 +8,10 @@ import os
 
 app = FastAPI()
 
+# Passerelle modèle Fon
+from fon_bridge import router as fon_router, load_fon_model
+app.include_router(fon_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -66,6 +70,10 @@ def reconnaitre_phrase(audio_path: str) -> dict:
             "confiance": confiance,
             "message": "Phrase non reconnue — veuillez répéter"
         }
+
+@app.on_event("startup")
+def startup():
+    load_fon_model()
 
 @app.get("/health")
 def health():
