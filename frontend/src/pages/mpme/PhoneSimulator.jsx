@@ -117,6 +117,8 @@ export default function PhoneSimulator() {
   const [depenseAmount, setDepenseAmount] = useState(null);
   const [micActive, setMicActive] = useState(false);
   const [dots, setDots] = useState('');
+  const [manualInput, setManualInput] = useState('');
+  const [currentHandler, setCurrentHandler] = useState(null); // callback pour saisie manuelle
   const recRef = useRef(null);
   const ringRef = useRef(null);
 
@@ -177,7 +179,24 @@ export default function PhoneSimulator() {
   const listenVentes = useCallback(() => {
     setPhase(STATES.LISTEN_VENTES);
     setMicActive(true);
-    addLog('En écoute — parlez maintenant...', 'system');
+    setManualInput('');
+    setCurrentHandler(() => (text) => {
+      setMicActive(false);
+      setCurrentHandler(null);
+      recRef.current?.abort?.();
+      addLog(`Vous (clavier) : "${text}"`, 'user');
+      const montant = extractAmount(text);
+      if (montant) {
+        setVenteAmount(montant);
+        addLog(`Compris : ${montant.toLocaleString('fr-FR')} FCFA`, 'system');
+        speak(`Parfait ! J'ai enregistré ${montant.toLocaleString('fr-FR')} francs de ventes.`,
+          () => setTimeout(() => askDepenses(), 800));
+      } else {
+        addLog('Montant non compris — réessayez', 'warn');
+        speak('Je n\'ai pas compris. Réessayez.', () => setTimeout(() => listenVentes(), 800));
+      }
+    });
+    addLog('En écoute — parlez ou tapez le montant ci-dessous...', 'system');
 
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
@@ -256,7 +275,18 @@ export default function PhoneSimulator() {
   const listenDepenses = useCallback(() => {
     setPhase(STATES.LISTEN_DEPENSES);
     setMicActive(true);
-    addLog('En écoute — parlez maintenant...', 'system');
+    setManualInput('');
+    setCurrentHandler(() => (text) => {
+      setMicActive(false);
+      setCurrentHandler(null);
+      recRef.current?.abort?.();
+      addLog(`Vous (clavier) : "${text}"`, 'user');
+      const montant = extractAmount(text) || 0;
+      if (montant > 0) addLog(`Compris : ${montant.toLocaleString('fr-FR')} FCFA`, 'system');
+      else addLog('Montant non compris — dépenses mises à 0', 'warn');
+      doRecap(montant);
+    });
+    addLog('En écoute — parlez ou tapez le montant ci-dessous...', 'system');
 
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { setPhase(STATES.ERROR); return; }
@@ -352,8 +382,17 @@ export default function PhoneSimulator() {
     recRef.current?.stop();
     stopRing();
     setMicActive(false);
+    setCurrentHandler(null);
+    setManualInput('');
     setPhase(STATES.IDLE);
     addLog('Appel terminé', 'system');
+  };
+
+  const submitManual = () => {
+    const val = manualInput.trim();
+    if (!val || !currentHandler) return;
+    setManualInput('');
+    currentHandler(val);
   };
 
   // ─── UI helpers ──────────────────────────────────────────────────────────
@@ -503,6 +542,33 @@ export default function PhoneSimulator() {
            phase === STATES.ERROR ? 'Utilisez Chrome pour la reconnaissance vocale' :
            'Parlez clairement le montant en FCFA'}
         </p>
+
+        {/* Saisie manuelle si micro ne capte pas */}
+        {micActive && (
+          <div className="mt-4 bg-white rounded-2xl border border-gray-200 shadow-sm p-3">
+            <p className="text-xs text-gray-500 mb-2 font-medium text-center">
+              🎤 Voix non captée ? Tapez le montant :
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={manualInput}
+                onChange={(e) => setManualInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && submitManual()}
+                placeholder="Ex: 5000"
+                className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-gray-800 focus:outline-none focus:border-sedo-green"
+                autoFocus
+              />
+              <button
+                onClick={submitManual}
+                disabled={!manualInput.trim()}
+                className="px-4 py-2 bg-sedo-green text-white rounded-xl text-sm font-bold disabled:opacity-40"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Journal + Infos ───────────────────────────────────────── */}
