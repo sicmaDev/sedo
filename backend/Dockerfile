@@ -12,4 +12,4 @@ COPY start.sh .
 RUN sed -i 's/\r$//' start.sh && chmod +x start.sh
 
 EXPOSE 4000
-CMD ["./start.sh"]
+CMD ["sh", "-c", "cd /app && npx prisma migrate deploy && node server.js"]

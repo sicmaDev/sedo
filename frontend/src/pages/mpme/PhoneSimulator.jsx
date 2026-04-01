@@ -64,13 +64,45 @@ function createRecognition(onResult, onError) {
   if (!SR) return null;
   const rec = new SR();
   rec.lang = 'fr-FR';
-  rec.interimResults = false;
-  rec.maxAlternatives = 3;
+  rec.interimResults = true;   // résultats intermédiaires pour détecter la voix plus tôt
+  rec.continuous = false;
+  rec.maxAlternatives = 5;
+
+  let finalResult = '';
+  let silenceTimer = null;
+
   rec.onresult = (e) => {
-    const results = Array.from(e.results[0]).map((r) => r.transcript);
-    onResult(results[0], results);
+    clearTimeout(silenceTimer);
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) {
+        finalResult += t;
+      } else {
+        interim += t;
+      }
+    }
+    // Si on a un résultat intermédiaire, attendre 1.5s de silence avant de valider
+    if (interim || finalResult) {
+      silenceTimer = setTimeout(() => {
+        const text = (finalResult || interim).trim();
+        if (text) onResult(text);
+      }, 1500);
+    }
   };
-  rec.onerror = onError;
+
+  rec.onend = () => {
+    clearTimeout(silenceTimer);
+    if (finalResult.trim()) {
+      onResult(finalResult.trim());
+    }
+  };
+
+  rec.onerror = (e) => {
+    clearTimeout(silenceTimer);
+    onError(e);
+  };
+
   return rec;
 }
 
@@ -145,43 +177,68 @@ export default function PhoneSimulator() {
   const listenVentes = useCallback(() => {
     setPhase(STATES.LISTEN_VENTES);
     setMicActive(true);
-    addLog('En écoute — ventes...', 'system');
+    addLog('En écoute — parlez maintenant...', 'system');
 
-    const rec = createRecognition(
-      (text) => {
-        setMicActive(false);
-        setVenteRaw(text);
-        addLog(`Vous : "${text}"`, 'user');
-        const montant = extractAmount(text);
-        if (montant) {
-          setVenteAmount(montant);
-          addLog(`Compris : ${montant.toLocaleString('fr-FR')} FCFA`, 'system');
-          speak(
-            `Parfait ! J'ai enregistré ${montant.toLocaleString('fr-FR')} francs de ventes.`,
-            () => setTimeout(() => askDepenses(), 800)
-          );
-        } else {
-          addLog('Montant non compris — nouvelle tentative', 'warn');
-          speak('Je n\'ai pas compris le montant. Pouvez-vous répéter ?', () => setTimeout(() => listenVentes(), 600));
-        }
-      },
-      (err) => {
-        setMicActive(false);
-        if (err.error === 'no-speech') {
-          addLog('Aucune voix détectée — nouvelle tentative', 'warn');
-          speak('Je n\'ai rien entendu. Réessayons.', () => setTimeout(() => listenVentes(), 600));
-        } else {
-          addLog('Erreur microphone : ' + err.error, 'error');
-          setPhase(STATES.ERROR);
-        }
-      }
-    );
-
-    if (!rec) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
       addLog('SpeechRecognition non supporté — Chrome recommandé', 'error');
       setPhase(STATES.ERROR);
       return;
     }
+
+    let handled = false;
+    const rec = new SR();
+    rec.lang = 'fr-FR';
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.maxAlternatives = 5;
+
+    let best = '';
+    rec.onresult = (e) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) best = e.results[i][0].transcript;
+        else if (!best) best = e.results[i][0].transcript;
+      }
+    };
+
+    rec.onend = () => {
+      if (handled) return;
+      handled = true;
+      setMicActive(false);
+      const text = best.trim();
+      if (!text) {
+        addLog('Aucune voix détectée — réessayez', 'warn');
+        speak('Je n\'ai rien entendu. Réessayons.', () => setTimeout(() => listenVentes(), 800));
+        return;
+      }
+      addLog(`Vous : "${text}"`, 'user');
+      const montant = extractAmount(text);
+      if (montant) {
+        setVenteAmount(montant);
+        addLog(`Compris : ${montant.toLocaleString('fr-FR')} FCFA`, 'system');
+        speak(`Parfait ! J'ai enregistré ${montant.toLocaleString('fr-FR')} francs de ventes.`,
+          () => setTimeout(() => askDepenses(), 800));
+      } else {
+        addLog(`"${text}" — montant non compris, réessayez`, 'warn');
+        speak('Je n\'ai pas compris le montant. Dites juste le chiffre, par exemple : cinq mille.',
+          () => setTimeout(() => listenVentes(), 800));
+      }
+    };
+
+    rec.onerror = (e) => {
+      if (handled) return;
+      if (e.error === 'no-speech') {
+        handled = true;
+        setMicActive(false);
+        addLog('Aucune voix — réessayez', 'warn');
+        speak('Je n\'ai rien entendu. Réessayons.', () => setTimeout(() => listenVentes(), 800));
+      } else if (e.error !== 'aborted') {
+        handled = true;
+        setMicActive(false);
+        addLog('Erreur microphone : ' + e.error, 'error');
+        setPhase(STATES.ERROR);
+      }
+    };
 
     recRef.current = rec;
     rec.start();
@@ -199,41 +256,58 @@ export default function PhoneSimulator() {
   const listenDepenses = useCallback(() => {
     setPhase(STATES.LISTEN_DEPENSES);
     setMicActive(true);
-    addLog('En écoute — dépenses...', 'system');
+    addLog('En écoute — parlez maintenant...', 'system');
 
-    const rec = createRecognition(
-      (text) => {
-        setMicActive(false);
-        setDepenseRaw(text);
-        addLog(`Vous : "${text}"`, 'user');
-        const montant = extractAmount(text);
-        const finalMontant = montant || 0;
-        setDepenseAmount(finalMontant);
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { setPhase(STATES.ERROR); return; }
 
-        if (finalMontant > 0) {
-          addLog(`Compris : ${finalMontant.toLocaleString('fr-FR')} FCFA`, 'system');
-        } else {
-          addLog('Montant non compris — dépenses mises à 0', 'warn');
-        }
+    let handled = false;
+    const rec = new SR();
+    rec.lang = 'fr-FR';
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.maxAlternatives = 5;
 
-        doRecap(finalMontant);
-      },
-      (err) => {
-        setMicActive(false);
-        if (err.error === 'no-speech') {
-          addLog('Aucune voix — dépenses mises à 0', 'warn');
-          doRecap(0);
-        } else {
-          addLog('Erreur microphone', 'error');
-          setPhase(STATES.ERROR);
-        }
+    let best = '';
+    rec.onresult = (e) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) best = e.results[i][0].transcript;
+        else if (!best) best = e.results[i][0].transcript;
       }
-    );
+    };
 
-    if (!rec) {
-      setPhase(STATES.ERROR);
-      return;
-    }
+    rec.onend = () => {
+      if (handled) return;
+      handled = true;
+      setMicActive(false);
+      const text = best.trim();
+      if (!text) {
+        addLog('Aucune voix — dépenses mises à 0', 'warn');
+        doRecap(0);
+        return;
+      }
+      addLog(`Vous : "${text}"`, 'user');
+      const montant = extractAmount(text) || 0;
+      if (montant > 0) {
+        addLog(`Compris : ${montant.toLocaleString('fr-FR')} FCFA`, 'system');
+      } else {
+        addLog('Montant non compris — dépenses mises à 0', 'warn');
+      }
+      doRecap(montant);
+    };
+
+    rec.onerror = (e) => {
+      if (handled) return;
+      handled = true;
+      setMicActive(false);
+      if (e.error === 'no-speech') {
+        addLog('Aucune voix — dépenses mises à 0', 'warn');
+        doRecap(0);
+      } else if (e.error !== 'aborted') {
+        addLog('Erreur microphone : ' + e.error, 'error');
+        setPhase(STATES.ERROR);
+      }
+    };
 
     recRef.current = rec;
     rec.start();
