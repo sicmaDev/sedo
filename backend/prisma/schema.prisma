@@ -40,6 +40,7 @@ model MPMEProfile {
   langue          String? // Langue parlée principale
 
   // Dossier de formalisation
+  email           String?  // Email de contact (optionnel)
   formeJuridique  String?
   numeroIFU       String?
   numeroRCCM      String?

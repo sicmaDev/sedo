@@ -38,14 +38,11 @@ router.put('/profile', authenticate, requireRole('mpme'), async (req, res) => {
         ...(employees   !== undefined && employees   !== '' && { employees:   parseInt(employees)   || null }),
         ...(createdYear !== undefined && createdYear !== '' && { createdYear: parseInt(createdYear) || null }),
         ...(langue      !== undefined && { langue }),
-        ...(ifuStatus && { ifuStatus }),
-        ...(rccmStatus && { rccmStatus }),
-        ...(npiStatus && { npiStatus }),
-        // Dossier de formalisation (champs optionnels — on accepte chaîne vide pour effacer)
+        // Dossier de formalisation — le statut est déduit automatiquement du numéro saisi
         ...(formeJuridique  !== undefined && { formeJuridique }),
-        ...(numeroIFU       !== undefined && { numeroIFU }),
-        ...(numeroRCCM      !== undefined && { numeroRCCM }),
-        ...(numeroNPI       !== undefined && { numeroNPI }),
+        ...(numeroIFU  !== undefined && { numeroIFU,  ifuStatus:  numeroIFU.trim()  ? 'Complet' : 'Non démarré' }),
+        ...(numeroRCCM !== undefined && { numeroRCCM, rccmStatus: numeroRCCM.trim() ? 'Complet' : 'Non démarré' }),
+        ...(numeroNPI  !== undefined && { numeroNPI,  npiStatus:  numeroNPI.trim()  ? 'Complet' : 'Non démarré' }),
         ...(dateNaissance   !== undefined && { dateNaissance }),
         ...(numeroCIP       !== undefined && { numeroCIP }),
         ...(adressePrecise  !== undefined && { adressePrecise }),

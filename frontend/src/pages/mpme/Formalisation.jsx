@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import {
   BookOpen, Scale, BarChart2, Download, Loader2,
@@ -7,7 +7,7 @@ import {
   MapPin, Users, Calendar, Lock,
   User, Phone, Mail,
   Lightbulb, Link2, Globe,
-  CheckCircle, Circle, CheckCircle2,
+  CheckCircle, Circle, CheckCircle2, Check,
   ArrowRight, ArrowLeft, Save,
   FolderOpen,
 } from 'lucide-react';
@@ -112,12 +112,13 @@ const docs = [
     color: 'blue',
     description: "L'IFU est votre numéro fiscal officiel délivré par la Direction Générale des Impôts (DGI) du Bénin. Obligatoire pour toute activité commerciale formelle.",
     steps: [
-      { step: 1, titre: 'Réunir les documents', detail: 'Pièce d\'identité (CNI ou passeport), justificatif de domicile de moins de 3 mois, photo d\'identité.' },
-      { step: 2, titre: 'Se rendre à la DGI', detail: 'Direction Générale des Impôts, Boulevard Saint-Michel, Cotonou. Guichet "Immatriculation" — ouvert lundi–vendredi 8h–16h.' },
-      { step: 3, titre: 'Remplir le formulaire', detail: 'Formulaire d\'immatriculation fiscale (fourni sur place ou téléchargeable sur dgi.finances.bj).' },
-      { step: 4, titre: 'Déposer le dossier', detail: 'Dépôt au guichet avec l\'ensemble des pièces. Délai de traitement : 5 à 10 jours ouvrables.' },
-      { step: 5, titre: 'Récupérer l\'IFU', detail: 'Votre IFU vous est remis sous forme de carte ou de document officiel.' },
+      { step: 1, titre: 'Avoir votre NPI', detail: 'Le NPI (ANIP) est obligatoire pour obtenir l\'IFU en ligne. Si vous ne l\'avez pas encore, obtenez-le d\'abord sur eservices.anip.bj.' },
+      { step: 2, titre: 'Aller sur ifu.impots.bj', detail: 'Portail officiel de la Direction Générale des Impôts (DGI). Accessible 24h/24, 7j/7.' },
+      { step: 3, titre: 'Remplir le formulaire en ligne', detail: 'Saisissez votre NPI, vos informations personnelles et d\'activité. Aucun déplacement requis.' },
+      { step: 4, titre: 'Soumettre la demande', detail: 'Validez votre demande en ligne. Traitement en moins de 24h par la DGI.' },
+      { step: 5, titre: 'Recevoir votre IFU', detail: 'L\'IFU vous est communiqué par SMS ou téléchargeable directement sur le portail.' },
     ],
+    onlineUrl: 'https://ifu.impots.bj/',
     apiex: true,
   },
   {
@@ -130,12 +131,13 @@ const docs = [
     color: 'purple',
     description: 'Le RCCM est l\'immatriculation de votre entreprise au registre du commerce. Il atteste de l\'existence légale de votre activité commerciale.',
     steps: [
-      { step: 1, titre: 'Préparer le dossier', detail: 'IFU (obligatoire), CNI, justificatif de domicile, statuts de l\'entreprise si SARL/SA, capital minimum selon forme juridique.' },
-      { step: 2, titre: 'Contacter le Guichet Unique', detail: 'Agence de Promotion des Investissements et des Exportations (APIEx), Cotonou. Tél : +229 21 30 88 40.' },
-      { step: 3, titre: 'Remplir le formulaire d\'immatriculation', detail: 'Formulaire CRIET disponible au guichet. Préciser : forme juridique, capital, activité principale, adresse du siège.' },
-      { step: 4, titre: 'Payer les frais', detail: 'Frais d\'immatriculation variables selon la forme juridique (environ 15 000 à 50 000 FCFA). Paiement en caisse.' },
-      { step: 5, titre: 'Obtenir l\'extrait RCCM', detail: 'Délai : 3 à 5 jours. L\'extrait RCCM est valable 3 mois. Renouvellement annuel recommandé.' },
+      { step: 1, titre: 'Préparer les documents', detail: 'IFU (obligatoire), CNI, justificatif de domicile, statuts si SARL/SA, capital minimum selon forme juridique.' },
+      { step: 2, titre: 'Aller sur monentreprise.bj', detail: 'Plateforme officielle APIEx pour la création et formalisation d\'entreprise en ligne. Aucun déplacement requis.' },
+      { step: 3, titre: 'Créer un compte et remplir le formulaire', detail: 'Précisez : forme juridique, capital, activité principale, adresse du siège. Téléversez vos pièces justificatives.' },
+      { step: 4, titre: 'Payer les frais en ligne', detail: 'Frais variables selon la forme juridique (15 000 à 50 000 FCFA). Paiement sécurisé en ligne (Mobile Money ou carte).' },
+      { step: 5, titre: 'Obtenir le RCCM', detail: 'Délai : 3 à 5 jours. Document envoyé par email ou téléchargeable sur votre espace monentreprise.bj.' },
     ],
+    onlineUrl: 'https://monentreprise.bj/',
     apiex: true,
   },
   {
@@ -149,11 +151,12 @@ const docs = [
     description: 'Le NPI est un identifiant unique délivré par l\'ANIP (Agence Nationale d\'Identification des Personnes). Il est requis pour l\'accès à certains services publics et financiers.',
     steps: [
       { step: 1, titre: 'Rassembler les pièces', detail: 'Acte de naissance (original ou copie certifiée), CNI ou passeport, photo d\'identité récente.' },
-      { step: 2, titre: 'Se rendre à l\'ANIP', detail: 'Agence Nationale d\'Identification des Personnes, Cotonou. Ou dans l\'une des antennes régionales ou mairies partenaires.' },
-      { step: 3, titre: 'Remplir la demande', detail: 'Formulaire de demande de NPI disponible sur place. Indiquer : état civil complet, adresse, profession.' },
-      { step: 4, titre: 'Enregistrement biométrique', detail: 'Prise de photo et d\'empreintes digitales sur place. Aucun frais en principe.' },
-      { step: 5, titre: 'Récupérer le NPI', detail: 'Délai : 7 à 14 jours. Le NPI est remis sous forme de carte ou de document officiel nominatif.' },
+      { step: 2, titre: 'Aller sur eservices.anip.bj', detail: 'Portail e-services de l\'ANIP, accessible 24h/24, 7j/7. Disponible aussi sur l\'app mobile "ANIP BJ" (Google Play).' },
+      { step: 3, titre: 'Créer un compte et remplir la demande', detail: 'Indiquez votre état civil complet, adresse, profession. Téléversez votre acte de naissance et CNI.' },
+      { step: 4, titre: 'Enregistrement biométrique', detail: 'Prise de photo et empreintes réalisées en antenne ANIP ou mairie partenaire (sur rendez-vous après soumission en ligne).' },
+      { step: 5, titre: 'Recevoir le NPI', detail: 'Délai : 7 à 14 jours. Document disponible en ligne sur votre espace ANIP. Gratuit.' },
     ],
+    onlineUrl: 'https://eservices.anip.bj/',
     apiex: false,
   },
 ];
@@ -238,6 +241,7 @@ function FieldInput({ label, required, children }) {
 }
 
 function DossierFormalisation({ profile }) {
+  const queryClient               = useQueryClient();
   const [step, setStep]           = useState(1);
   const [form, setForm]           = useState(CHAMP_VIDE);
   const [saved, setSaved]         = useState(false);
@@ -269,8 +273,16 @@ function DossierFormalisation({ profile }) {
       if (payload.createdYear) payload.createdYear = parseInt(payload.createdYear);
       return api.put('/mpme/profile', payload);
     },
-    onSuccess: () => { setSaved(true); setSaveError(null); setTimeout(() => setSaved(false), 4000); },
-    onError:   () => setSaveError('Erreur lors de la sauvegarde. Réessayez.'),
+    onSuccess: async () => {
+      await api.post('/score/calculate').catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['mpme-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['score'] });
+      setStep(1);
+      setSaved(true);
+      setSaveError(null);
+      setTimeout(() => setSaved(false), 4000);
+    },
+    onError: () => setSaveError("Erreur lors de l'enregistrement. Réessayez."),
   });
 
   const set   = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
@@ -509,7 +521,7 @@ function DossierFormalisation({ profile }) {
               className="flex items-center gap-2 text-sm font-black bg-sedo-green text-white px-6 py-3 rounded-2xl hover:opacity-90 active:scale-95 transition-all shadow-md shadow-sedo-green/20 disabled:opacity-50">
               {isPending
                 ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <Save className="w-4 h-4" />} Finaliser
+                : <Save className="w-4 h-4" />} Enregistrer
             </button>
           </div>
         )}
@@ -689,14 +701,20 @@ export default function Formalisation() {
                     ))}
                   </div>
 
-                  {doc.apiex && (
-                    <div className="mt-4 bg-white rounded-xl p-3 border border-blue-200 flex gap-2 items-center">
-                      <Link2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                      <p className="text-xs text-blue-700">
-                        <strong>APIEx :</strong> Ce document peut être soumis via le Guichet Unique en ligne à{' '}
-                        <span className="underline">guichetunique.bj</span>. L'intégration directe est disponible dans SEDO Pro.
-                      </p>
-                    </div>
+                  {doc.onlineUrl && (
+                    <a
+                      href={doc.onlineUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`mt-4 flex items-center gap-2 px-4 py-3 rounded-xl border-2 ${c.border} bg-white hover:${c.bg} transition-colors`}
+                    >
+                      <Globe className="w-4 h-4 text-sedo-green flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-gray-800">Faire la démarche en ligne</p>
+                        <p className={`text-[11px] ${c.text} truncate`}>{doc.onlineUrl}</p>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    </a>
                   )}
 
                   <button

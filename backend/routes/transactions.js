@@ -2,6 +2,7 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate, requireRole } = require('../middleware/auth');
 const PDFDocument = require('pdfkit');
+const { calculateScore } = require('../services/scoring');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -456,6 +457,7 @@ router.post('/', authenticate, requireRole('mpme'), async (req, res) => {
       },
     });
 
+    calculateScore(profile.id).catch(() => {});
     res.status(201).json(tx);
   } catch (err) {
     console.error(err);
@@ -471,6 +473,7 @@ router.delete('/:id', authenticate, requireRole('mpme'), async (req, res) => {
     if (!tx || tx.mpmeId !== profile.id)
       return res.status(404).json({ error: 'Transaction introuvable' });
     await prisma.transaction.delete({ where: { id: req.params.id } });
+    calculateScore(profile.id).catch(() => {});
     res.json({ success: true });
   } catch (err) {
     console.error(err);
