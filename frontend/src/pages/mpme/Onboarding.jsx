@@ -29,18 +29,18 @@ export default function Onboarding() {
   const [location, setLocation] = useState('');
   const [employees, setEmployees] = useState('');
   const [createdYear, setCreatedYear] = useState('');
+  const [langue, setLangue] = useState('');
 
   const firstName = (user?.fullName || '').split(' ')[0];
 
   const saveAndFinish = async () => {
     setSaving(true);
     try {
-      await api.put('/mpme/profile', {
-        sector,
-        location,
-        employees: parseInt(employees) || 1,
-        createdYear: parseInt(createdYear) || new Date().getFullYear(),
-      });
+      const payload = { sector, location };
+      if (employees) payload.employees = parseInt(employees);
+      if (createdYear) payload.createdYear = parseInt(createdYear);
+      if (langue) payload.langue = langue;
+      await api.put('/mpme/profile', payload);
     } catch {
       // non bloquant
     } finally {
@@ -125,17 +125,39 @@ export default function Onboarding() {
           <div className="grid grid-cols-2 gap-3 mb-8">
             {/* Effectif */}
             <div>
-              <label className="text-sm font-bold text-gray-700 mb-1.5 block">Effectif</label>
+              <label className="text-sm font-bold text-gray-700 mb-1.5 block">
+                Effectif
+                <span className="ml-1.5 text-[10px] font-normal text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">optionnel</span>
+              </label>
               <input type="number" value={employees} onChange={(e) => setEmployees(e.target.value)}
                 placeholder="Ex: 3" min="1"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-sedo-green" />
             </div>
             {/* Année création */}
             <div>
-              <label className="text-sm font-bold text-gray-700 mb-1.5 block">Année de création</label>
+              <label className="text-sm font-bold text-gray-700 mb-1.5 block">
+                Année création
+                <span className="ml-1.5 text-[10px] font-normal text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">optionnel</span>
+              </label>
               <input type="number" value={createdYear} onChange={(e) => setCreatedYear(e.target.value)}
                 placeholder="Ex: 2019" min="1990" max={new Date().getFullYear()}
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-sedo-green" />
+            </div>
+          </div>
+
+          {/* Langue */}
+          <div className="mb-8">
+            <label className="text-sm font-bold text-gray-700 mb-3 block">
+              Langue parlée
+              <span className="ml-1.5 text-[10px] font-normal text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">optionnel</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {['Français', 'Fon', 'Yoruba', 'Adja', 'Dendi', 'Autre'].map((l) => (
+                <button key={l} onClick={() => setLangue(l)}
+                  className={`rounded-xl px-3 py-2.5 border-2 text-sm font-medium transition-all active:scale-95 ${langue === l ? 'border-sedo-green bg-green-50 text-sedo-green font-bold' : 'border-gray-100 bg-white text-gray-600'}`}>
+                  {l}
+                </button>
+              ))}
             </div>
           </div>
 

@@ -5,8 +5,6 @@ import numpy as np
 import tempfile
 import os
 import re
-import torch
-from transformers import WhisperProcessor, WhisperForConditionalGeneration
 
 app = FastAPI()
 
@@ -18,130 +16,98 @@ app.add_middleware(
 )
 
 # ─────────────────────────────────────────────
-# Chargement Whisper fine-tuné Fon
+# Stratégie de chargement du modèle
+#
+#  Priorité 1 : modèle Whisper fine-tuné Fon local (si disponible)
+#  Priorité 2 : openai-whisper standard (téléchargement auto)
 # ─────────────────────────────────────────────
-FON_MODEL_PATH = os.environ.get("FON_MODEL_PATH", os.path.join(os.path.dirname(__file__), 'whisper-small-fon'))
+FON_MODEL_PATH = os.environ.get(
+    "FON_MODEL_PATH",
+    os.path.join(os.path.dirname(__file__), "whisper-small-fon")
+)
+WHISPER_MODEL_SIZE = os.environ.get("WHISPER_MODEL_SIZE", "small")
 
-whisper_processor = None
-whisper_model = None
+_mode      = None   # "fon" | "openai"
+_processor = None   # HuggingFace processor (mode fon)
+_hf_model  = None   # HuggingFace model (mode fon)
+_ow_model  = None   # openai-whisper model (mode openai)
+
+SEUIL_ENERGIE = 0.01
+
 
 def get_model():
-    global whisper_processor, whisper_model
-    if whisper_processor is None:
-        print("Chargement du modele Whisper Fon...")
-        whisper_processor = WhisperProcessor.from_pretrained(FON_MODEL_PATH)
-        whisper_model = WhisperForConditionalGeneration.from_pretrained(FON_MODEL_PATH)
-        whisper_model.eval()
-        print("Modele Whisper Fon pret")
-    return whisper_processor, whisper_model
+    global _mode, _processor, _hf_model, _ow_model
 
-SEUIL_ENERGIE = 0.03
+    if _mode is not None:
+        return _mode
+
+    # ── Tentative 1 : modèle Fon local ──────────────────────────────────────
+    if os.path.isdir(FON_MODEL_PATH):
+        try:
+            from transformers import WhisperProcessor, WhisperForConditionalGeneration
+            import torch
+            print(f"[STT] Chargement modèle Fon local : {FON_MODEL_PATH}")
+            _processor = WhisperProcessor.from_pretrained(FON_MODEL_PATH)
+            _hf_model  = WhisperForConditionalGeneration.from_pretrained(FON_MODEL_PATH)
+            _hf_model.eval()
+            _mode = "fon"
+            print("[STT] Modèle Fon prêt")
+            return _mode
+        except Exception as e:
+            print(f"[STT] Modèle Fon indisponible ({e}), fallback openai-whisper")
+
+    # ── Fallback : openai-whisper (téléchargement automatique) ──────────────
+    try:
+        import whisper
+        print(f"[STT] Chargement openai-whisper ({WHISPER_MODEL_SIZE})...")
+        _ow_model = whisper.load_model(WHISPER_MODEL_SIZE)
+        _mode = "openai"
+        print(f"[STT] openai-whisper/{WHISPER_MODEL_SIZE} prêt")
+        return _mode
+    except Exception as e:
+        raise RuntimeError(f"[STT] Impossible de charger un modèle Whisper : {e}")
+
 
 # ─────────────────────────────────────────────
-# Mots-clés Fon pour l'extraction
+# Mots-clés pour l'extraction
 # ─────────────────────────────────────────────
-MOTS_VENTE  = ["so", "sa", "ça", "sɔ"]      # vendre
-MOTS_ACHAT  = ["ze", "zé", "blɔ"]     # acheter
+MOTS_VENTE  = ["so", "sa", "ça", "sɔ", "vend", "vendu", "reçu", "gagné", "recette"]
+MOTS_ACHAT  = ["ze", "zé", "blɔ", "acheté", "payé", "dépensé", "achat"]
 MOTS_DEVISE = ["fcfa", "franc", "cfa"]
 
 # Nombres en Fon (mots → chiffres)
 NOMBRES_FON = {
-    # 500
     "kpɔn ko": 500, "tɔn ko": 500,
-    # 700
-    "un xo atɔn nukwɔn tɔn": 700, "un gban e we awi": 700,
-    # 800
-    "a klo kpo e we kpo un gbantɔn": 800,
-    # 900
-    "akpo ɖo kpo e xwe kpo e nε": 900,
-    # 1000 — toutes variantes
     "caki ɖokpo": 1000, "caki ɖokpoo": 1000, "caki ɖokpóo": 1000,
-    "a ki ɖokpo": 1000, "kεki ɖokpo": 1000, "cakin ɖokpo": 1000, "caki ɖokpó": 1000,
-    "chaki ɖokpo": 1000, "chaki ɖokpoo": 1000,
-    "jaki ɖokpo": 1000, "jaki ɖokpoo": 1000,
-    "nucaki ɖokpo": 1000, "nucaki ɖokpoo": 1000,
-    "ciaki ɖokpo": 1000, "ciaki ɖokpoo": 1000, "ciaki ɖokpó": 1000,
-    "ca xe ɖokpo": 1000, "ca ke ɖokpo": 1000,
-    "kpocya kido kpo": 1000, "cya kido kpo": 1000,
-    "cea kido kpo": 1000, "cea kyi ɖo ku": 1000,
-    "ci aki ɖokpoo": 1000, "ciakido kpo": 1000,
-    "ciaki ɖo kpo": 1000, "jaki ɖo kpo": 1000,
-    "ja ki do kpo": 1000, "chakidopko": 1000,
-    "caki": 1000,
-    # 1100
-    "a klo kpo kpɔn un nε": 1100,
-    # 1150
-    "a klo kpo kpo nyi zεn": 1150,
-    # 1200
-    "a ɖe do kpo kpo un tantɔn": 1200,
-    # 1250
-    "a ɖe o kpo kpo un wo": 1250,
-    # 1300
-    "a ɖe do xpo kpɔn wu e we": 1300,
-    # 1325
-    "kɔn we atɔn jaki ɖokpokpɔn we atɔn": 1325,
-    "a klo kpo kpɔn we atɔn": 1325,
-    # 1350
-    "caki ɖokpokpɔn wε ε nε": 1350,
-    # 1375
-    "jaki ɖo kpo kpo wu xɔ tɔn": 1375,
-    # 1400
-    "ki ɖokpo kpo xɔ tɔn wukun ɖokpo": 1400,
-    # 1500
-    "caki ɖokpo atade": 1500,
-    # 2000
+    "a ki ɖokpo": 1000, "kεki ɖokpo": 1000, "cakin ɖokpo": 1000,
+    "chaki ɖokpo": 1000, "jaki ɖokpo": 1000,
+    "nucaki ɖokpo": 1000, "ciaki ɖokpo": 1000,
+    "ca xe ɖokpo": 1000, "caki": 1000,
     "caki wu we": 2000, "caki we": 2000, "caki hwe": 2000, "caki εnε": 2000,
-    # 2500
-    "a ki we a ɖa ɖe": 2500,
-    # 3000
     "ca kya tɔn": 3000,
-    # 3100
-    "a kya tɔn kpɔn εnε": 3100,
-    # 3150
-    "akya ɖokpɔn jizεn": 3150,
-    # 3200
-    "ya jε atɔ gbɔn tantɔn": 3200,
-    # 3500
-    "taka to ada ɖe": 3500,
-    # 4000
     "a kya εn mε": 4000,
-    # 4500
-    "kεnε a ɖa ɖe": 4500,
-    # 5000
     "a kya tɔn": 5000,
-    # 5500
-    "caca to ɔ ɖa ɖe": 5500,
-    # 6000
     "sata yi zε": 6000, "a kya yi zεn": 6000,
-    "caki a yi zεn": 6000, "ki a yi zεn": 6000, "za kε a yi zan": 6000,
-    # 7000
     "a ki tε we": 7000, "ki te we": 7000,
-    # 8000
     "e tantan": 8000, "caki tɔn kpɔn": 8000,
-    # 9000
     "e ta mε": 9000, "a ki tεnε": 9000,
-    # 10000
     "caki wo": 10000,
-    # 11000
-    "jaki wo ɖo gbo": 11000, "e ɖo gbo": 11000, "e ɖo gbe": 11000,
-    # 12000
-    "e ta ki wewe": 12000, "saki wewe": 12000, "caki wewe": 12000,
-    # 13000
-    "a ɖe wa tɔn": 13000, "e ta ki wa tɔn": 13000,
-    # 14000
-    "a ki wε nε": 14000, "a ɖi wε εnε": 14000, "javi wε nε": 14000,
-    # 15000
     "ca kya fɔ tɔn": 15000,
-    # 16000
-    "cakya fɔ tɔn klo kpo": 16000,
-    # 17000
-    "cakafɔ tɔn kungu we": 17000,
-    # 18000
-    "jajajafɔ tɔn kwan tɔn": 18000,
-    # 19000
-    "kaka kpo kpo nukun εnε": 19000, "a xia xo tɔn xwe nε": 19000,
-    # 30000
     "caki gbɔn": 30000,
+}
+
+# Nombres en français parlé (pour openai-whisper en mode fr)
+NOMBRES_FR = {
+    "cinq cents": 500, "cinq cent": 500,
+    "mille": 1000, "un millier": 1000,
+    "deux mille": 2000, "trois mille": 3000,
+    "quatre mille": 4000, "cinq mille": 5000,
+    "six mille": 6000, "sept mille": 7000,
+    "huit mille": 8000, "neuf mille": 9000,
+    "dix mille": 10000, "quinze mille": 15000,
+    "vingt mille": 20000, "vingt-cinq mille": 25000,
+    "trente mille": 30000, "cinquante mille": 50000,
+    "cent mille": 100000,
 }
 
 
@@ -151,7 +117,7 @@ NOMBRES_FON = {
 def extraire_donnees(texte: str) -> dict:
     texte_lower = texte.lower()
 
-    # Détecter l'action
+    # Action
     action = None
     for mot in MOTS_VENTE:
         if mot in texte_lower:
@@ -163,54 +129,68 @@ def extraire_donnees(texte: str) -> dict:
                 action = "achat"
                 break
 
-    # Extraire le montant (chiffres arabes)
+    # Montant — chiffres arabes en priorité
     montant = None
-    nombres = re.findall(r'\d+', texte)
+    nombres = re.findall(r'\d[\d\s]*\d|\d', texte)
     if nombres:
-        montant = int(max(nombres, key=lambda x: int(x)))
+        candidats = [int(re.sub(r'\s', '', n)) for n in nombres]
+        montant = max(candidats)
 
-    # Si pas de chiffres, chercher mots Fon (expressions longues en premier)
+    # Montant — mots Fon
     if montant is None:
         for mot, valeur in sorted(NOMBRES_FON.items(), key=lambda x: len(x[0]), reverse=True):
             if mot in texte_lower:
                 montant = valeur
                 break
 
-    # Détecter la devise
-    devise = None
+    # Montant — mots français
+    if montant is None:
+        for mot, valeur in sorted(NOMBRES_FR.items(), key=lambda x: len(x[0]), reverse=True):
+            if mot in texte_lower:
+                montant = valeur
+                break
+
+    # Devise
+    devise = "FCFA"
     for mot in MOTS_DEVISE:
         if mot in texte_lower:
             devise = "FCFA"
             break
-    if devise is None and montant is not None:
-        devise = "FCFA"  # Devise par défaut
 
-    return {
-        "action": action,
-        "montant": montant,
-        "devise": devise,
-    }
+    return {"action": action, "montant": montant, "devise": devise}
 
 
 # ─────────────────────────────────────────────
-# Transcription Fon (Whisper)
+# Transcription audio → texte
 # ─────────────────────────────────────────────
-def transcrire_fon(audio_path: str):
+def transcrire(audio_path: str, language: str = "fr") -> str | None:
     audio, sr = librosa.load(audio_path, sr=16000)
 
     rms = float(np.sqrt(np.mean(audio ** 2)))
-    print(f"Energie RMS: {round(rms, 4)}")
+    print(f"[STT] Energie RMS: {round(rms, 4)}")
     if rms < SEUIL_ENERGIE:
         return None
 
-    processor, model = get_model()
-    inputs = processor(audio, sampling_rate=16000, return_tensors="pt")
-    with torch.no_grad():
-        predicted_ids = model.generate(inputs.input_features)
+    mode = get_model()
 
-    transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0].strip()
-    print(f"Transcription Fon: {transcription}")
-    return transcription
+    if mode == "fon":
+        import torch
+        inputs = _processor(audio, sampling_rate=16000, return_tensors="pt")
+        with torch.no_grad():
+            predicted_ids = _hf_model.generate(inputs.input_features)
+        text = _processor.batch_decode(predicted_ids, skip_special_tokens=True)[0].strip()
+        print(f"[STT] Transcription Fon: {text}")
+        return text
+
+    else:  # mode openai
+        # Pour le Fon, on laisse Whisper auto-détecter (language=None)
+        # Pour le français, on force "fr"
+        lang = None if language == "fon" else language
+        options = dict(language=lang, task="transcribe")
+        result = _ow_model.transcribe(audio_path, **options)
+        text = result["text"].strip()
+        print(f"[STT] Transcription openai-whisper ({lang or 'auto'}): {text}")
+        return text
 
 
 # ─────────────────────────────────────────────
@@ -218,17 +198,20 @@ def transcrire_fon(audio_path: str):
 # ─────────────────────────────────────────────
 @app.get("/health")
 def health():
+    mode = _mode or "non chargé"
+    modele = "whisper-fon-local" if mode == "fon" else f"openai-whisper/{WHISPER_MODEL_SIZE}"
     return {
         "status": "ok",
         "service": "SEDO STT",
-        "modele": "whisper-small-fon"
+        "mode": mode,
+        "modele": modele,
     }
 
 
 @app.post("/transcribe")
 async def transcribe(
     audio: UploadFile = File(...),
-    language: str = Form(default="fon")
+    language: str = Form(default="fr")
 ):
     suffix = os.path.splitext(audio.filename or "audio.webm")[1] or ".webm"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -236,33 +219,33 @@ async def transcribe(
         tmp_path = tmp.name
 
     try:
-        # Etape 1 — Transcription Fon
-        transcription = transcrire_fon(tmp_path)
+        text = transcrire(tmp_path, language=language)
 
-        if transcription is None:
+        if text is None:
             return {
                 "reconnue": False,
                 "text": "",
                 "donnees": None,
                 "confiance": 0,
-                "message": "Aucune voix detectee — veuillez parler"
+                "message": "Aucune voix détectée — parlez plus fort"
             }
 
-        # Etape 2 — Extraction des données structurées
-        donnees = extraire_donnees(transcription)
-        print(f"Donnees extraites: {donnees}")
+        donnees = extraire_donnees(text)
+        mode    = _mode or "inconnu"
+        modele  = "whisper-fon" if mode == "fon" else f"openai-whisper/{WHISPER_MODEL_SIZE}"
 
+        print(f"[STT] Données extraites: {donnees}")
         return {
             "reconnue": True,
-            "text": transcription,
+            "text": text,
             "donnees": donnees,
-            "confiance": 75.0,
-            "langue": "fon",
-            "moteur": "whisper-fon"
+            "confiance": 80.0 if mode == "fon" else 70.0,
+            "langue": language,
+            "moteur": modele,
         }
 
     except Exception as e:
-        print(f"Erreur STT: {e}")
+        print(f"[STT] Erreur: {e}")
         return {
             "reconnue": False,
             "text": "",
@@ -271,4 +254,5 @@ async def transcribe(
             "message": f"Erreur de traitement: {str(e)}"
         }
     finally:
-        os.unlink(tmp_path)
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)

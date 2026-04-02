@@ -6,51 +6,226 @@ const PDFDocument = require('pdfkit');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-const GREEN = '#22c55e';
-const DARK = '#111827';
-const GRAY = '#6b7280';
-const LIGHT_GRAY = '#f3f4f6';
-const RED = '#ef4444';
-
+// ─── Constantes couleurs OHADA/SEDO ─────────────────────────────────────────
+const GREEN_OHADA = '#1e5631';   // vert foncé officiel
+const YELLOW_OHADA = '#e8a020';   // bande jaune OHADA
+const RED_BENIN = '#cc0000';   // rouge République du Bénin
+const BLUE_HDR = '#1a3a5c';   // bleu entête tableau
+const LIGHT_GRAY = '#f5f5f5';
+const DARK_TEXT = '#1a1a1a';
+const GRAY_TEXT = '#666666';
 function formatFCFA(amount) {
-  return Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' FCFA';
+  if (amount === null || amount === undefined) return '—';
+  return Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + ' FCFA';
 }
 function formatDate(date) {
   return new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+// ─── Helpers PDF OHADA ───────────────────────────────────────────────────────
+
+/**
+ * En-tête style officiel OHADA — République du Bénin
+ * Retourne la position Y après l'entête
+ */
+function ohadaHeader(doc, docTitle, periodLabel, profile) {
+  const pageW = doc.page.width;
+  const mL = 40;
+  const mR = 40;
+  const cW = pageW - mL - mR;
+
+  // ── Bloc titre gauche
+  doc.fillColor(GREEN_OHADA).fontSize(11).font('Helvetica-Bold')
+    .text(docTitle, mL, 18, { width: 310 });
+  doc.fillColor(GRAY_TEXT).fontSize(7.5).font('Helvetica')
+    .text('Référentiel OHADA – Système Comptable SYSCOHADA', mL, 34);
+
+  // ── Bloc République du Bénin (droite)
+  const dossierNum = `SEDO-${new Date().getFullYear()}-${profile.id.replace(/-/g, '').slice(-8).toUpperCase()}`;
+  doc.fillColor(GREEN_OHADA).fontSize(8).font('Helvetica-Bold')
+    .text(`N° Dossier : ${dossierNum}`, mL + 310, 40, { width: cW - 310, align: 'right' });
+
+  // ── Double ligne séparatrice
+  doc.rect(mL, 52, cW, 3).fill(GREEN_OHADA);
+  doc.rect(mL, 56, cW, 3).fill(YELLOW_OHADA);
+
+  let y = 66;
+
+  // ── Section identification entreprise
+  doc.rect(mL, y, cW, 18).fill(GREEN_OHADA);
+  doc.fillColor('white').fontSize(8).font('Helvetica-Bold')
+    .text('IDENTIFICATION DE L\'ENTREPRISE', mL + 6, y + 5);
+  y += 19;
+
+  const infos = [
+    [`Raison sociale : ${profile.company || 'N/A'}`, `Secteur d'activité : ${profile.sector || 'N/A'}`],
+    [`Représentant légal : ${profile.user?.fullName || 'N/A'}`, `Localisation : ${profile.location || 'N/A'}`],
+    [`Téléphone : ${profile.user?.phone || 'N/A'}  |  Email : ${profile.user?.email || 'N/A'}`,
+    `IFU : ${profile.numeroIFU || 'N/A'}  |  RCCM : ${profile.numeroRCCM || 'N/A'}`],
+  ];
+  infos.forEach((row, i) => {
+    const bg = i % 2 === 0 ? LIGHT_GRAY : '#ffffff';
+    doc.rect(mL, y, cW, 15).fill(bg);
+    doc.fillColor(DARK_TEXT).fontSize(7.5).font('Helvetica')
+      .text(row[0], mL + 5, y + 4, { width: 255 })
+      .text(row[1], mL + 265, y + 4, { width: cW - 270 });
+    y += 15;
+  });
+
+  // ── Ligne période
+  doc.rect(mL, y, cW, 14).fill(YELLOW_OHADA);
+  doc.fillColor('#1a1a1a').fontSize(7.5).font('Helvetica-Bold')
+    .text(`Période : ${periodLabel.toUpperCase()}   |   Généré le : ${new Date().toLocaleDateString('fr-FR')}`,
+      mL + 6, y + 3, { width: cW - 12 });
+  y += 16;
+
+  return y + 4;
+}
+
+/**
+ * Pied de page OHADA commun
+ */
+function ohadaFooter(doc, subtitle) {
+  const pageW = doc.page.width;
+  const mL = 40;
+  const footY = doc.page.height - 30;
+  const range = doc.bufferedPageRange();
+
+  for (let i = range.start; i < range.start + range.count; i++) {
+    doc.switchToPage(i);
+    doc.rect(0, footY, pageW, 30).fill(GREEN_OHADA);
+    doc.fillColor('white').fontSize(7).font('Helvetica')
+      .text('SEDO — Plateforme Fintech MPME Bénin  |  www.sedo.bj',
+        mL, footY + 5, { lineBreak: false });
+    doc.fillColor('white').fontSize(7)
+      .text(subtitle,
+        0, footY + 5, { align: 'right', width: pageW - mL, lineBreak: false });
+    doc.fillColor('white').fontSize(7)
+      .text('Document confidentiel – Usage strictement financier',
+        mL, footY + 17, { lineBreak: false });
+    doc.fillColor('white').fontSize(7)
+      .text(`Page ${i - range.start + 1} / ${range.count}`,
+        0, footY + 17, { align: 'right', width: pageW - mL, lineBreak: false });
+  }
+}
+
+/**
+ * Calcule les données annuelles pour le Compte de Résultat SYSCOHADA
+ */
+async function getResultatAnnuel(mpmeId, year) {
+  const tx = await prisma.transaction.findMany({
+    where: {
+      mpmeId,
+      date: {
+        gte: new Date(year, 0, 1),
+        lte: new Date(year, 11, 31, 23, 59, 59),
+      },
+    },
+  });
+  if (tx.length === 0) return null;
+
+  const sum = (arr) => arr.reduce((s, t) => s + t.amount, 0);
+  const entrees = tx.filter(t => t.type === 'entree');
+  const sorties = tx.filter(t => t.type === 'sortie');
+
+  const ca = sum(entrees.filter(t => t.category === 'vente'));
+  const autresProduits = sum(entrees.filter(t => t.category !== 'vente'));
+  const achats = sum(sorties.filter(t => t.category === 'achat'));
+  const stocks = sum(sorties.filter(t => t.category === 'stock'));
+  const chargesPerso = sum(sorties.filter(t => t.category === 'depense'));
+  const autresCharges = sum(sorties.filter(t => t.category === 'autre'));
+  const totalProduits = ca + autresProduits;
+  const totalCharges = achats + stocks + chargesPerso + autresCharges;
+  const ebit = totalProduits - totalCharges;
+
+  return {
+    ca, autresProduits, achats, stocks, chargesPerso, autresCharges,
+    amortissements: null, ebit, chargesFinancieres: null,
+    resultatAvantImpot: ebit, impot: null, resultatNet: ebit
+  };
+}
+
+/**
+ * Calcule les données cumulées pour le Bilan SYSCOHADA (au 31/12 de l'année)
+ */
+async function getBilanAnnuel(mpmeId, year) {
+  const endOfYear = new Date(year, 11, 31, 23, 59, 59);
+  const allTx = await prisma.transaction.findMany({
+    where: { mpmeId, date: { lte: endOfYear } },
+  });
+  if (allTx.length === 0) return null;
+
+  const sum = (arr) => arr.reduce((s, t) => s + t.amount, 0);
+  const totalEntrees = sum(allTx.filter(t => t.type === 'entree'));
+  const totalSorties = sum(allTx.filter(t => t.type === 'sortie'));
+  const stocksCumul = sum(allTx.filter(t => t.type === 'sortie' && t.category === 'stock'));
+
+  // Résultat annuel (pour capital propre)
+  const annualTx = allTx.filter(t => new Date(t.date).getFullYear() === year);
+  const annualE = sum(annualTx.filter(t => t.type === 'entree'));
+  const annualS = sum(annualTx.filter(t => t.type === 'sortie'));
+  const resultat = annualE - annualS;
+
+  const tresorerie = Math.max(0, totalEntrees - totalSorties);
+  const totalActif = tresorerie + stocksCumul;
+  const capitaux = Math.max(0, totalActif - Math.max(0, resultat));
+  const totalPassif = totalActif; // équilibre comptable
+
+  return {
+    // ACTIF
+    immobilisations: null,
+    stocks: stocksCumul > 0 ? stocksCumul : null,
+    creances: null,
+    tresorerie,
+    totalActif,
+    // PASSIF
+    capitaux: capitaux > 0 ? capitaux : null,
+    emprunts: null,
+    dettesFournisseurs: null,
+    dettesFiscales: null,
+    autresDettes: null,
+    totalPassif,
+    resultat,
+  };
+}
+
+function resolvePeriod(query) {
+  let startDate, endDate, periodLabel, filenameSlug;
+  if (query.from && query.to) {
+    startDate = new Date(query.from);
+    endDate = new Date(query.to);
+    endDate.setHours(23, 59, 59, 999);
+    const fmt = (d) => d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    periodLabel = `du ${fmt(startDate)} au ${fmt(endDate)}`;
+    filenameSlug = `${query.from}_${query.to}`;
+  } else {
+    const now = new Date();
+    let year, month;
+    if (query.month) {
+      [year, month] = query.month.split('-').map(Number);
+    } else {
+      year = now.getFullYear();
+      month = now.getMonth() + 1;
+    }
+    startDate = new Date(year, month - 1, 1);
+    endDate = new Date(year, month, 0, 23, 59, 59);
+    periodLabel = startDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    filenameSlug = `${year}-${String(month).padStart(2, '0')}`;
+  }
+  return { startDate, endDate, periodLabel, filenameSlug };
+}
+
+// ─── 1. JOURNAL DE TRANSACTIONS ──────────────────────────────────────────────
 // GET /api/transactions/journal.pdf
 router.get('/journal.pdf', authenticate, requireRole('mpme'), async (req, res) => {
   try {
     const profile = await prisma.mPMEProfile.findUnique({
       where: { userId: req.user.id },
-      include: { user: { select: { fullName: true, phone: true } } },
+      include: { user: { select: { fullName: true, phone: true, email: true } } },
     });
     if (!profile) return res.status(404).json({ error: 'Profil introuvable' });
 
-    // Resolve date range: supports ?from=YYYY-MM-DD&to=YYYY-MM-DD or ?month=YYYY-MM
-    let startDate, endDate, periodLabel, filenameSlug;
-    if (req.query.from && req.query.to) {
-      startDate = new Date(req.query.from);
-      endDate = new Date(req.query.to);
-      endDate.setHours(23, 59, 59, 999);
-      const fmt = (d) => d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-      periodLabel = `du ${fmt(startDate)} au ${fmt(endDate)}`;
-      filenameSlug = `${req.query.from}_${req.query.to}`;
-    } else {
-      let year, month;
-      if (req.query.month) {
-        [year, month] = req.query.month.split('-').map(Number);
-      } else {
-        const now = new Date();
-        year = now.getFullYear();
-        month = now.getMonth() + 1;
-      }
-      startDate = new Date(year, month - 1, 1);
-      endDate = new Date(year, month, 1);
-      periodLabel = startDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-      filenameSlug = `${year}-${String(month).padStart(2, '0')}`;
-    }
+    const { startDate, endDate, periodLabel, filenameSlug } = resolvePeriod(req.query);
 
     const transactions = await prisma.transaction.findMany({
       where: { mpmeId: profile.id, date: { gte: startDate, lte: endDate } },
@@ -61,134 +236,163 @@ router.get('/journal.pdf', authenticate, requireRole('mpme'), async (req, res) =
     const totalSorties = transactions.filter(t => t.type === 'sortie').reduce((s, t) => s + t.amount, 0);
     const soldeNet = totalEntrees - totalSorties;
 
-    // --- Build PDF ---
-    const doc = new PDFDocument({ margins: { top: 40, left: 40, right: 40, bottom: 0 }, size: 'A4' });
-
+    const doc = new PDFDocument({
+      margins: { top: 20, left: 40, right: 40, bottom: 30 },
+      size: 'A4',
+      bufferPages: true,
+    });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="journal_sedo_${filenameSlug}.pdf"`);
     doc.pipe(res);
 
     const pageW = doc.page.width;
-    const marginL = 40;
-    const contentW = pageW - marginL * 2;
+    const mL = 40;
+    const cW = pageW - mL * 2;
 
-    // Header bar
-    doc.rect(0, 0, pageW, 60).fill(GREEN);
-    doc.fillColor('white').fontSize(22).font('Helvetica-Bold').text('SEDO', marginL, 15);
-    doc.fontSize(10).font('Helvetica').text('Plateforme Fintech MPME — Bénin', marginL, 38);
-    doc.fontSize(12).font('Helvetica-Bold').text('JOURNAL DE TRANSACTIONS', 0, 22, { align: 'right', width: pageW - marginL });
-    doc.fontSize(9).font('Helvetica').text(periodLabel.toUpperCase(), 0, 38, { align: 'right', width: pageW - marginL });
+    let y = ohadaHeader(doc, 'JOURNAL DE TRANSACTIONS', periodLabel, profile);
 
-    let y = 75;
+    // ── Titre section ──
+    doc.rect(mL, y, cW, 20).fill(GREEN_OHADA);
+    doc.fillColor('white').fontSize(10).font('Helvetica-Bold')
+      .text('JOURNAL DE TRANSACTIONS', mL + 6, y + 6, { width: cW - 12, align: 'center' });
+    y += 22;
 
-    // Company info box
-    doc.rect(marginL, y, contentW, 60).fillAndStroke(LIGHT_GRAY, '#e5e7eb');
-    doc.fillColor(DARK).fontSize(11).font('Helvetica-Bold').text(profile.user?.fullName || 'N/A', marginL + 10, y + 8);
-    doc.fontSize(9).font('Helvetica').fillColor(GRAY)
-      .text(`Entreprise : ${profile.businessName || 'N/A'}`, marginL + 10, y + 24)
-      .text(`Secteur : ${profile.sector || 'N/A'}  |  Localisation : ${profile.location || 'N/A'}`, marginL + 10, y + 38)
-      .text(`Tél : ${profile.user?.phone || 'N/A'}`, marginL + 10, y + 52);
-    doc.fillColor(GRAY).fontSize(9).text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, 0, y + 8, { align: 'right', width: pageW - marginL });
-
-    y += 70;
-
-    // Summary boxes (3 columns)
-    const boxW = (contentW - 20) / 3;
-    const boxes = [
-      { label: 'ENTRÉES', value: formatFCFA(totalEntrees), color: GREEN },
-      { label: 'SORTIES', value: formatFCFA(totalSorties), color: RED },
-      { label: 'SOLDE NET', value: formatFCFA(soldeNet), color: soldeNet >= 0 ? GREEN : RED },
-    ];
-    boxes.forEach((box, i) => {
-      const bx = marginL + i * (boxW + 10);
-      doc.rect(bx, y, boxW, 50).fillAndStroke('#ffffff', '#e5e7eb');
-      doc.fontSize(8).font('Helvetica').fillColor(GRAY).text(box.label, bx + 8, y + 8);
-      doc.fontSize(13).font('Helvetica-Bold').fillColor(box.color).text(box.value, bx + 8, y + 22, { width: boxW - 16 });
+    // ── Résumé 3 cases ──
+    const bW = (cW - 10) / 3;
+    [
+      { label: 'TOTAL ENTRÉES (CRÉDITS)', value: totalEntrees, color: GREEN_OHADA },
+      { label: 'TOTAL SORTIES (DÉBITS)', value: totalSorties, color: '#c0392b' },
+      { label: 'SOLDE NET', value: soldeNet, color: soldeNet >= 0 ? GREEN_OHADA : '#c0392b' },
+    ].forEach((b, i) => {
+      const bx = mL + i * (bW + 5);
+      doc.rect(bx, y, bW, 32).fillAndStroke('#ffffff', '#cccccc');
+      doc.fillColor(GRAY_TEXT).fontSize(6.5).font('Helvetica').text(b.label, bx + 5, y + 5, { width: bW - 10 });
+      const sign = b.label === 'SOLDE NET' && soldeNet < 0 ? '-' : '';
+      doc.fillColor(b.color).fontSize(10).font('Helvetica-Bold')
+        .text(sign + formatFCFA(Math.abs(b.value)), bx + 5, y + 15, { width: bW - 10 });
     });
+    y += 38;
 
-    y += 62;
-
-    // Grouper les transactions par article (description)
-    const grouped = {};
-    transactions.forEach((tx) => {
-      const key = (tx.description || 'Sans libellé').trim();
-      if (!grouped[key]) grouped[key] = { entrees: 0, sorties: 0, count: 0 };
-      if (tx.type === 'entree') grouped[key].entrees += tx.amount;
-      else grouped[key].sorties += tx.amount;
-      grouped[key].count++;
-    });
-
-    const articles = Object.entries(grouped).map(([name, data]) => ({
-      name,
-      entrees: data.entrees,
-      sorties: data.sorties,
-      net: data.entrees - data.sorties,
-      count: data.count,
-    }));
-
-    // Table header
-    const colsG = {
-      article: marginL,
-      entrees: marginL + contentW - 240,
-      sorties: marginL + contentW - 150,
-      net: marginL + contentW - 60,
+    // ── En-tête tableau ──
+    // Répartition : N°=22 | DATE=50 | LIBELLÉ=135 | CATÉG.=55 | DÉBIT=84 | CRÉDIT=84 | SOLDE=85 = 515
+    const cols = {
+      num: { x: mL, w: 22 },
+      date: { x: mL + 22, w: 50 },
+      lib: { x: mL + 72, w: 135 },
+      cat: { x: mL + 207, w: 55 },
+      debit: { x: mL + 262, w: 84 },
+      cred: { x: mL + 346, w: 84 },
+      solde: { x: mL + 430, w: 85 },
     };
-    doc.rect(marginL, y, contentW, 22).fill(DARK);
-    doc.fillColor('white').fontSize(9).font('Helvetica-Bold')
-      .text('ARTICLE / LIBELLÉ', colsG.article + 4, y + 7)
-      .text('ENTRÉES', colsG.entrees, y + 7, { width: 85, align: 'right' })
-      .text('SORTIES', colsG.sorties, y + 7, { width: 85, align: 'right' })
-      .text('NET', colsG.net, y + 7, { width: 55, align: 'right' });
-    y += 24;
 
-    if (articles.length === 0) {
-      doc.rect(marginL, y, contentW, 30).fillAndStroke(LIGHT_GRAY, '#e5e7eb');
-      doc.fillColor(GRAY).fontSize(10).font('Helvetica').text('Aucune transaction pour cette période.', marginL, y + 9, { width: contentW, align: 'center' });
-      y += 32;
+    doc.rect(mL, y, cW, 18).fill(BLUE_HDR);
+    doc.fillColor('white').fontSize(7.5).font('Helvetica-Bold')
+      .text('N°', cols.num.x + 2, y + 5, { width: cols.num.w })
+      .text('DATE', cols.date.x + 2, y + 5, { width: cols.date.w })
+      .text('LIBELLÉ', cols.lib.x + 2, y + 5, { width: cols.lib.w })
+      .text('CATÉG.', cols.cat.x + 2, y + 5, { width: cols.cat.w })
+      .text('DÉBIT', cols.debit.x, y + 5, { width: cols.debit.w, align: 'right' })
+      .text('CRÉDIT', cols.cred.x, y + 5, { width: cols.cred.w, align: 'right' })
+      .text('SOLDE', cols.solde.x, y + 5, { width: cols.solde.w, align: 'right' });
+    y += 19;
+
+    if (transactions.length === 0) {
+      doc.rect(mL, y, cW, 24).fill(LIGHT_GRAY);
+      doc.fillColor(GRAY_TEXT).fontSize(9).font('Helvetica')
+        .text('Aucune transaction sur cette période.', mL, y + 8, { width: cW, align: 'center' });
+      y += 26;
     } else {
-      articles.forEach((art, idx) => {
-        if (y > doc.page.height - 80) { doc.addPage(); y = 40; }
-        const rowH = 24;
+      let solde = 0;
+      transactions.forEach((tx, idx) => {
+        if (y > doc.page.height - 60) {
+          doc.addPage();
+          y = 40;
+          // Répéter l'entête tableau sur nouvelle page
+          doc.rect(mL, y, cW, 18).fill(BLUE_HDR);
+          doc.fillColor('white').fontSize(7.5).font('Helvetica-Bold')
+            .text('N°', cols.num.x + 2, y + 5, { width: cols.num.w })
+            .text('DATE', cols.date.x + 2, y + 5, { width: cols.date.w })
+            .text('LIBELLÉ', cols.lib.x + 2, y + 5, { width: cols.lib.w })
+            .text('CATÉG.', cols.cat.x + 2, y + 5, { width: cols.cat.w })
+            .text('DÉBIT', cols.debit.x, y + 5, { width: cols.debit.w, align: 'right' })
+            .text('CRÉDIT', cols.cred.x, y + 5, { width: cols.cred.w, align: 'right' })
+            .text('SOLDE', cols.solde.x, y + 5, { width: cols.solde.w, align: 'right' });
+          y += 19;
+        }
+
+        const isEntree = tx.type === 'entree';
+        const debit = isEntree ? 0 : tx.amount;
+        const credit = isEntree ? tx.amount : 0;
+        solde += isEntree ? tx.amount : -tx.amount;
+
+        const rowH = 16;
         const bg = idx % 2 === 0 ? '#ffffff' : LIGHT_GRAY;
-        doc.rect(marginL, y, contentW, rowH).fill(bg);
+        doc.rect(mL, y, cW, rowH).fill(bg);
 
-        doc.fillColor(DARK).fontSize(9).font('Helvetica-Bold')
-          .text(art.name, colsG.article + 4, y + 7, { width: colsG.entrees - colsG.article - 8, ellipsis: true });
-        doc.fillColor(GREEN).font('Helvetica')
-          .text(art.entrees > 0 ? formatFCFA(art.entrees) : '—', colsG.entrees, y + 7, { width: 85, align: 'right' });
-        doc.fillColor(RED)
-          .text(art.sorties > 0 ? formatFCFA(art.sorties) : '—', colsG.sorties, y + 7, { width: 85, align: 'right' });
-        doc.fillColor(art.net >= 0 ? GREEN : RED).font('Helvetica-Bold')
-          .text((art.net >= 0 ? '+' : '') + formatFCFA(art.net), colsG.net, y + 7, { width: 55, align: 'right' });
+        const catLabel = (tx.category || 'autre').charAt(0).toUpperCase() + (tx.category || 'autre').slice(1);
+        const libelle = tx.description || (isEntree ? 'Entrée' : 'Sortie');
 
-        doc.moveTo(marginL, y + rowH).lineTo(marginL + contentW, y + rowH).strokeColor('#e5e7eb').lineWidth(0.5).stroke();
+        doc.fillColor(DARK_TEXT).fontSize(7).font('Helvetica')
+          .text(String(idx + 1).padStart(3, '0'), cols.num.x + 2, y + 5, { width: cols.num.w })
+          .text(formatDate(tx.date), cols.date.x + 2, y + 5, { width: cols.date.w })
+          .text(libelle, cols.lib.x + 2, y + 5, { width: cols.lib.w - 4, ellipsis: true })
+          .text(catLabel, cols.cat.x + 2, y + 5, { width: cols.cat.w - 4 });
+
+        // Débit (rouge)
+        if (debit > 0)
+          doc.fillColor('#c0392b').fontSize(7).font('Helvetica-Bold')
+            .text(formatFCFA(debit), cols.debit.x, y + 5, { width: cols.debit.w, align: 'right' });
+        else
+          doc.fillColor(GRAY_TEXT).fontSize(7).font('Helvetica')
+            .text('—', cols.debit.x, y + 5, { width: cols.debit.w, align: 'right' });
+
+        // Crédit (vert)
+        if (credit > 0)
+          doc.fillColor(GREEN_OHADA).fontSize(7).font('Helvetica-Bold')
+            .text(formatFCFA(credit), cols.cred.x, y + 5, { width: cols.cred.w, align: 'right' });
+        else
+          doc.fillColor(GRAY_TEXT).fontSize(7).font('Helvetica')
+            .text('—', cols.cred.x, y + 5, { width: cols.cred.w, align: 'right' });
+
+        // Solde courant
+        doc.fillColor(solde >= 0 ? GREEN_OHADA : '#c0392b').fontSize(7).font('Helvetica-Bold')
+          .text(formatFCFA(solde), cols.solde.x, y + 5, { width: cols.solde.w, align: 'right' });
+
+        // Ligne séparatrice
+        doc.moveTo(mL, y + rowH).lineTo(mL + cW, y + rowH)
+          .strokeColor('#dddddd').lineWidth(0.3).stroke();
         y += rowH;
       });
 
-      // Totals row
+      // ── Ligne totaux ──
       y += 4;
-      doc.rect(marginL, y, contentW, 26).fill(DARK);
-      doc.fillColor('white').fontSize(10).font('Helvetica-Bold')
-        .text('TOTAL', colsG.article + 4, y + 7)
-        .text(formatFCFA(totalEntrees), colsG.entrees, y + 7, { width: 85, align: 'right' })
-        .text(formatFCFA(totalSorties), colsG.sorties, y + 7, { width: 85, align: 'right' });
-      doc.fillColor(soldeNet >= 0 ? GREEN : RED).font('Helvetica-Bold')
-        .text((soldeNet >= 0 ? '+' : '') + formatFCFA(soldeNet), colsG.net, y + 7, { width: 55, align: 'right' });
-      y += 30;
+      doc.rect(mL, y, cW, 20).fill(GREEN_OHADA);
+      doc.fillColor('white').fontSize(8).font('Helvetica-Bold')
+        .text('TOTAUX', cols.lib.x, y + 6, { width: cols.lib.w })
+        .text(formatFCFA(totalSorties), cols.debit.x, y + 6, { width: cols.debit.w, align: 'right' })
+        .text(formatFCFA(totalEntrees), cols.cred.x, y + 6, { width: cols.cred.w, align: 'right' });
+      doc.fillColor(soldeNet >= 0 ? YELLOW_OHADA : '#ff9999').fontSize(8).font('Helvetica-Bold')
+        .text(formatFCFA(soldeNet), cols.solde.x, y + 6, { width: cols.solde.w, align: 'right' });
+      y += 24;
     }
 
-    // Footer
-    const footerY = doc.page.height - 35;
-    doc.rect(0, footerY, pageW, 35).fill(DARK);
-    doc.fillColor(GRAY).fontSize(8).font('Helvetica')
-      .text('SEDO — Plateforme Fintech MPME Bénin | www.sedo.bj', marginL, footerY + 6)
-      .text(`${transactions.length} transaction(s) | ${periodLabel}`, 0, footerY + 6, { align: 'right', width: pageW - marginL })
-      .text('Document généré automatiquement — non contractuel', marginL, footerY + 18);
+    // ── Note méthodologique ──
+    y += 4;
+    doc.rect(mL, y, cW, 28).fillAndStroke('#fffde7', YELLOW_OHADA);
+    doc.fillColor('#7d5a00').fontSize(7).font('Helvetica-Bold').text('ℹ  Note :', mL + 6, y + 5);
+    doc.fillColor('#7d5a00').fontSize(7).font('Helvetica')
+      .text('Ce journal est établi sur la base des transactions enregistrées dans SEDO (saisie manuelle et/ou Mobile Money). '
+        + 'Les colonnes Débit et Crédit reflètent respectivement les sorties et les entrées de trésorerie. '
+        + 'Document indicatif — non certifié par un expert-comptable agréé OHADA.',
+        mL + 6, y + 14, { width: cW - 12 });
+    y += 32;
 
+    ohadaFooter(doc, `Journal de transactions | ${periodLabel} | ${transactions.length} opération(s)`);
+    doc.flushPages();
     doc.end();
   } catch (err) {
     console.error(err);
-    if (!res.headersSent) res.status(500).json({ error: 'Erreur génération PDF' });
+    if (!res.headersSent) res.status(500).json({ error: 'Erreur génération journal PDF' });
   }
 });
 
@@ -216,12 +420,7 @@ router.get('/', authenticate, requireRole('mpme'), async (req, res) => {
     }
 
     const [transactions, total] = await Promise.all([
-      prisma.transaction.findMany({
-        where,
-        orderBy: { date: 'desc' },
-        skip,
-        take: parseInt(limit),
-      }),
+      prisma.transaction.findMany({ where, orderBy: { date: 'desc' }, skip, take: parseInt(limit) }),
       prisma.transaction.count({ where }),
     ]);
 
@@ -269,11 +468,8 @@ router.delete('/:id', authenticate, requireRole('mpme'), async (req, res) => {
   try {
     const profile = await prisma.mPMEProfile.findUnique({ where: { userId: req.user.id } });
     const tx = await prisma.transaction.findUnique({ where: { id: req.params.id } });
-
-    if (!tx || tx.mpmeId !== profile.id) {
+    if (!tx || tx.mpmeId !== profile.id)
       return res.status(404).json({ error: 'Transaction introuvable' });
-    }
-
     await prisma.transaction.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (err) {
@@ -299,9 +495,8 @@ router.get('/history', authenticate, requireRole('mpme'), async (req, res) => {
         where: { mpmeId: profile.id, date: { gte: start, lte: end } },
       });
 
-      const recettes = txs.filter((t) => t.type === 'entree').reduce((s, t) => s + t.amount, 0);
-      const depenses = txs.filter((t) => t.type === 'sortie').reduce((s, t) => s + t.amount, 0);
-
+      const recettes = txs.filter(t => t.type === 'entree').reduce((s, t) => s + t.amount, 0);
+      const depenses = txs.filter(t => t.type === 'sortie').reduce((s, t) => s + t.amount, 0);
       const monthLabel = start.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
       history.push({ month: monthLabel, recettes, depenses, count: txs.length });
     }
@@ -313,182 +508,163 @@ router.get('/history', authenticate, requireRole('mpme'), async (req, res) => {
   }
 });
 
-// ─── Helpers PDF partagés ────────────────────────────────────────────────────
-function pdfHeader(doc, title, periodLabel, profile) {
-  const pageW = doc.page.width;
-  const marginL = 40;
-  doc.rect(0, 0, pageW, 60).fill(GREEN);
-  doc.fillColor('white').fontSize(22).font('Helvetica-Bold').text('SEDO', marginL, 15);
-  doc.fontSize(10).font('Helvetica').text('Plateforme Fintech MPME — Bénin', marginL, 38);
-  doc.fontSize(12).font('Helvetica-Bold').text(title, 0, 22, { align: 'right', width: pageW - marginL });
-  doc.fontSize(9).font('Helvetica').text(periodLabel.toUpperCase(), 0, 38, { align: 'right', width: pageW - marginL });
-
-  let y = 75;
-  doc.rect(marginL, y, pageW - marginL * 2, 58).fillAndStroke('#f3f4f6', '#e5e7eb');
-  doc.fillColor('#111827').fontSize(11).font('Helvetica-Bold').text(profile.user?.fullName || 'N/A', marginL + 10, y + 8);
-  doc.fontSize(9).font('Helvetica').fillColor('#6b7280')
-    .text(`Entreprise : ${profile.businessName || 'N/A'}`, marginL + 10, y + 22)
-    .text(`Secteur : ${profile.sector || 'N/A'}  |  Localisation : ${profile.location || 'N/A'}`, marginL + 10, y + 36)
-    .text(`Tél : ${profile.user?.phone || 'N/A'}`, marginL + 10, y + 50);
-  doc.fillColor('#6b7280').fontSize(9).text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, 0, y + 8, { align: 'right', width: pageW - marginL });
-  return y + 68;
-}
-
-function pdfFooter(doc, subtitle) {
-  const pageW = doc.page.width;
-  const marginL = 40;
-  const footerY = doc.page.height - 35;
-  doc.rect(0, footerY, pageW, 35).fill('#111827');
-  doc.fillColor('#6b7280').fontSize(8).font('Helvetica')
-    .text('SEDO — Plateforme Fintech MPME Bénin', marginL, footerY + 6)
-    .text(subtitle, 0, footerY + 6, { align: 'right', width: pageW - marginL })
-    .text('Document généré automatiquement — non contractuel', marginL, footerY + 18);
-}
-
-function resolvePeriod(query) {
-  let startDate, endDate, periodLabel, filenameSlug;
-  if (query.from && query.to) {
-    startDate = new Date(query.from);
-    endDate = new Date(query.to);
-    endDate.setHours(23, 59, 59, 999);
-    const fmt = (d) => d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    periodLabel = `du ${fmt(startDate)} au ${fmt(endDate)}`;
-    filenameSlug = `${query.from}_${query.to}`;
-  } else {
-    const now = new Date();
-    let year, month;
-    if (query.month) {
-      [year, month] = query.month.split('-').map(Number);
-    } else {
-      year = now.getFullYear();
-      month = now.getMonth() + 1;
-    }
-    startDate = new Date(year, month - 1, 1);
-    endDate = new Date(year, month, 1);
-    periodLabel = startDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-    filenameSlug = `${year}-${String(month).padStart(2, '0')}`;
-  }
-  return { startDate, endDate, periodLabel, filenameSlug };
-}
-
+// ─── 2. BILAN SIMPLIFIÉ SYSCOHADA ────────────────────────────────────────────
 // GET /api/transactions/bilan.pdf
 router.get('/bilan.pdf', authenticate, requireRole('mpme'), async (req, res) => {
   try {
     const profile = await prisma.mPMEProfile.findUnique({
       where: { userId: req.user.id },
-      include: { user: { select: { fullName: true, phone: true } } },
+      include: { user: { select: { fullName: true, phone: true, email: true } } },
     });
     if (!profile) return res.status(404).json({ error: 'Profil introuvable' });
 
-    const { startDate, endDate, periodLabel, filenameSlug } = resolvePeriod(req.query);
+    const { endDate, periodLabel, filenameSlug } = resolvePeriod(req.query);
+    const yearN = endDate.getFullYear();
+    const yearN1 = yearN - 1;
+    const yearN2 = yearN - 2;
 
-    // Toutes les transactions jusqu'à la date de fin (cumul)
-    const allTx = await prisma.transaction.findMany({
-      where: { mpmeId: profile.id, date: { lte: endDate } },
-      orderBy: { date: 'asc' },
+    // Données pour chaque exercice
+    const [dataN, dataN1, dataN2] = await Promise.all([
+      getBilanAnnuel(profile.id, yearN),
+      getBilanAnnuel(profile.id, yearN1),
+      getBilanAnnuel(profile.id, yearN2),
+    ]);
+
+    const doc = new PDFDocument({
+      margins: { top: 20, left: 40, right: 40, bottom: 30 },
+      size: 'A4',
+      bufferPages: true,
     });
-    const periodTx = allTx.filter(t => new Date(t.date) >= startDate);
-
-    // Calculs ACTIF
-    const totalEntreesGlobal = allTx.filter(t => t.type === 'entree').reduce((s, t) => s + t.amount, 0);
-    const totalSortiesGlobal = allTx.filter(t => t.type === 'sortie').reduce((s, t) => s + t.amount, 0);
-    const tresorerie = Math.max(0, totalEntreesGlobal - totalSortiesGlobal);
-
-    // Calculs PASSIF
-    const totalEntreesPeriode = periodTx.filter(t => t.type === 'entree').reduce((s, t) => s + t.amount, 0);
-    const totalSortiesPeriode = periodTx.filter(t => t.type === 'sortie').reduce((s, t) => s + t.amount, 0);
-    const resultatPeriode = totalEntreesPeriode - totalSortiesPeriode;
-    const capitalInitial = Math.max(0, tresorerie - resultatPeriode);
-
-    const doc = new PDFDocument({ margins: { top: 40, left: 40, right: 40, bottom: 0 }, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="bilan_sedo_${filenameSlug}.pdf"`);
     doc.pipe(res);
 
     const pageW = doc.page.width;
-    const marginL = 40;
-    const contentW = pageW - marginL * 2;
-    let y = pdfHeader(doc, 'BILAN SIMPLIFIÉ', periodLabel, profile);
+    const mL = 40;
+    const cW = pageW - mL * 2;
 
-    // ── Résumé ──
-    const boxW = (contentW - 10) / 2;
-    [
-      { label: 'TOTAL ACTIF', value: formatFCFA(tresorerie), color: GREEN },
-      { label: 'TOTAL PASSIF', value: formatFCFA(tresorerie), color: '#6b7280' },
-    ].forEach((b, i) => {
-      const bx = marginL + i * (boxW + 10);
-      doc.rect(bx, y, boxW, 44).fillAndStroke('#ffffff', '#e5e7eb');
-      doc.fontSize(8).font('Helvetica').fillColor('#6b7280').text(b.label, bx + 8, y + 7);
-      doc.fontSize(14).font('Helvetica-Bold').fillColor(b.color).text(b.value, bx + 8, y + 20, { width: boxW - 16 });
-    });
-    y += 54;
+    let y = ohadaHeader(doc, 'BILAN SIMPLIFIÉ (SYSCOHADA)', periodLabel, profile);
 
-    // ── Tableau Actif / Passif côte à côte ──
-    const colW = (contentW - 10) / 2;
+    // ── Titre ──
+    doc.rect(mL, y, cW, 20).fill(GREEN_OHADA);
+    doc.fillColor('white').fontSize(10).font('Helvetica-Bold')
+      .text('BILAN SIMPLIFIÉ (SYSCOHADA) – 3 DERNIERS EXERCICES', mL + 6, y + 6, { width: cW - 12, align: 'center' });
+    y += 22;
 
-    // Actif header
-    doc.rect(marginL, y, colW, 22).fill(GREEN);
-    doc.fillColor('white').fontSize(9).font('Helvetica-Bold').text('ACTIF', marginL + 8, y + 7);
-    // Passif header
-    doc.rect(marginL + colW + 10, y, colW, 22).fill('#111827');
-    doc.fillColor('white').fontSize(9).font('Helvetica-Bold').text('PASSIF & CAPITAUX', marginL + colW + 18, y + 7);
-    y += 24;
+    // ── Dimensions colonnes ──
+    const colLabel = 230;
+    const colYear = 88;
+    const gap = 5;
 
-    const actifRows = [
-      { label: 'Trésorerie disponible', value: tresorerie, note: 'Solde cumulé (entrées − sorties)' },
-      { label: 'Créances clients', value: 0, note: 'Non renseigné' },
-      { label: 'Stock marchandises', value: 0, note: 'Non renseigné' },
-    ];
-    const passifRows = [
-      { label: 'Capital propre estimé', value: capitalInitial, note: 'Trésorerie − résultat période' },
-      { label: `Résultat ${periodLabel}`, value: resultatPeriode, note: resultatPeriode >= 0 ? 'Bénéfice' : 'Déficit' },
-      { label: 'Dettes fournisseurs', value: 0, note: 'Non renseigné' },
-    ];
+    // En-tête colonnes
+    doc.rect(mL, y, cW, 18).fill(BLUE_HDR);
+    doc.fillColor('white').fontSize(8).font('Helvetica-Bold')
+      .text('POSTES DU BILAN', mL + 4, y + 5, { width: colLabel })
+      .text(`N-2 (${yearN2}) FCFA`, mL + colLabel + gap, y + 5, { width: colYear, align: 'right' })
+      .text(`N-1 (${yearN1}) FCFA`, mL + colLabel + gap + colYear + gap, y + 5, { width: colYear, align: 'right' })
+      .text(`N   (${yearN}) FCFA`, mL + colLabel + gap + (colYear + gap) * 2, y + 5, { width: colYear, align: 'right' });
+    y += 20;
 
-    const rowH = 32;
-    actifRows.forEach((row, i) => {
-      const bg = i % 2 === 0 ? '#ffffff' : '#f9fafb';
-      const rx = marginL;
-      doc.rect(rx, y + i * rowH, colW, rowH).fill(bg);
-      doc.fillColor('#111827').fontSize(8).font('Helvetica-Bold').text(row.label, rx + 8, y + i * rowH + 6, { width: colW - 80 });
-      doc.fillColor('#6b7280').fontSize(7).font('Helvetica').text(row.note, rx + 8, y + i * rowH + 18, { width: colW - 80 });
-      doc.fillColor(row.value > 0 ? GREEN : '#6b7280').fontSize(9).font('Helvetica-Bold')
-        .text(formatFCFA(row.value), rx + colW - 95, y + i * rowH + 10, { width: 85, align: 'right' });
-      doc.moveTo(rx, y + i * rowH + rowH).lineTo(rx + colW, y + i * rowH + rowH).strokeColor('#e5e7eb').lineWidth(0.5).stroke();
-    });
+    // Fonction d'affichage d'une ligne OHADA
+    function bilanRow(label, vN2, vN1, vN, isTotal = false, isSection = false) {
+      if (y > doc.page.height - 60) { doc.addPage(); y = 40; }
 
-    passifRows.forEach((row, i) => {
-      const bg = i % 2 === 0 ? '#ffffff' : '#f9fafb';
-      const rx = marginL + colW + 10;
-      doc.rect(rx, y + i * rowH, colW, rowH).fill(bg);
-      doc.fillColor('#111827').fontSize(8).font('Helvetica-Bold').text(row.label, rx + 8, y + i * rowH + 6, { width: colW - 80 });
-      doc.fillColor('#6b7280').fontSize(7).font('Helvetica').text(row.note, rx + 8, y + i * rowH + 18, { width: colW - 80 });
-      const isNeg = row.value < 0;
-      doc.fillColor(isNeg ? RED : row.value > 0 ? '#111827' : '#6b7280').fontSize(9).font('Helvetica-Bold')
-        .text((isNeg ? '-' : '') + formatFCFA(Math.abs(row.value)), rx + colW - 95, y + i * rowH + 10, { width: 85, align: 'right' });
-      doc.moveTo(rx, y + i * rowH + rowH).lineTo(rx + colW, y + i * rowH + rowH).strokeColor('#e5e7eb').lineWidth(0.5).stroke();
-    });
+      const rowH = isTotal ? 18 : 15;
+      let bg;
+      if (isSection) bg = '#dce8dc';
+      else if (isTotal) bg = '#c8dcc8';
+      else bg = y % 2 === 0 ? '#ffffff' : LIGHT_GRAY;
 
-    y += actifRows.length * rowH + 8;
+      doc.rect(mL, y, cW, rowH).fill(bg);
 
-    // Total rows
-    [
-      { label: 'TOTAL ACTIF', value: tresorerie, color: GREEN, x: marginL },
-      { label: 'TOTAL PASSIF', value: tresorerie, color: '#111827', x: marginL + colW + 10 },
-    ].forEach(({ label, value, color, x }) => {
-      doc.rect(x, y, colW, 24).fill(color);
-      doc.fillColor('white').fontSize(9).font('Helvetica-Bold').text(label, x + 8, y + 7);
-      doc.fillColor('white').fontSize(9).font('Helvetica-Bold').text(formatFCFA(value), x + colW - 95, y + 7, { width: 85, align: 'right' });
-    });
-    y += 32;
+      const fSize = isTotal || isSection ? 8 : 7.5;
+      const fFont = isTotal || isSection ? 'Helvetica-Bold' : 'Helvetica';
+      const indent = isSection ? 0 : (isTotal ? 0 : 8);
 
-    // Note explicative
-    doc.rect(marginL, y, contentW, 38).fillAndStroke('#fffbeb', '#fcd34d');
-    doc.fillColor('#92400e').fontSize(8).font('Helvetica-Bold').text('ℹ  Note méthodologique', marginL + 10, y + 7);
-    doc.fillColor('#92400e').fontSize(7).font('Helvetica')
-      .text('Ce bilan est établi sur la base des transactions enregistrées dans SEDO. Les postes "Créances", "Stock" et "Dettes" nécessitent une saisie manuelle pour être complets. Document indicatif — non certifié par un expert-comptable.', marginL + 10, y + 18, { width: contentW - 20 });
+      doc.fillColor(DARK_TEXT).fontSize(fSize).font(fFont)
+        .text(label, mL + 4 + indent, y + (rowH - fSize) / 2, { width: colLabel - 4 });
 
-    pdfFooter(doc, `Bilan simplifié | ${periodLabel}`);
+      const xN2 = mL + colLabel + gap;
+      const xN1 = xN2 + colYear + gap;
+      const xN = xN1 + colYear + gap;
+
+      const renderVal = (v, x) => {
+        if (v === null || v === undefined) {
+          doc.fillColor(GRAY_TEXT).fontSize(fSize).font('Helvetica')
+            .text('—', x, y + (rowH - fSize) / 2, { width: colYear, align: 'right' });
+        } else {
+          const color = isTotal ? GREEN_OHADA : DARK_TEXT;
+          doc.fillColor(color).fontSize(fSize).font(fFont)
+            .text(formatFCFA(v), x, y + (rowH - fSize) / 2, { width: colYear, align: 'right' });
+        }
+      };
+
+      renderVal(vN2 !== undefined ? vN2 : null, xN2);
+      renderVal(vN1 !== undefined ? vN1 : null, xN1);
+      renderVal(vN !== undefined ? vN : null, xN);
+
+      doc.moveTo(mL, y + rowH).lineTo(mL + cW, y + rowH)
+        .strokeColor('#cccccc').lineWidth(0.3).stroke();
+      y += rowH;
+    }
+
+    const n2 = dataN2, n1 = dataN1, n = dataN;
+
+    // ── ACTIF ──
+    bilanRow('ACTIF', null, null, null, false, true);
+    bilanRow('Immobilisations nettes (Actif immobilisé)',
+      n2?.immobilisations, n1?.immobilisations, n?.immobilisations);
+    bilanRow('Stocks et en-cours',
+      n2?.stocks, n1?.stocks, n?.stocks);
+    bilanRow('Créances clients et autres créances',
+      n2?.creances, n1?.creances, n?.creances);
+    bilanRow('Trésorerie-Actif (Banques, Caisse)',
+      n2?.tresorerie, n1?.tresorerie, n?.tresorerie);
+    bilanRow('TOTAL ACTIF',
+      n2?.totalActif, n1?.totalActif, n?.totalActif, true);
+
+    y += 6;
+
+    // ── PASSIF ──
+    bilanRow('PASSIF', null, null, null, false, true);
+    bilanRow('Capitaux propres',
+      n2?.capitaux, n1?.capitaux, n?.capitaux);
+    bilanRow('Emprunts et dettes financières LT',
+      n2?.emprunts, n1?.emprunts, n?.emprunts);
+    bilanRow('Dettes fournisseurs',
+      n2?.dettesFournisseurs, n1?.dettesFournisseurs, n?.dettesFournisseurs);
+    bilanRow('Dettes fiscales et sociales (DGI/CNSS)',
+      n2?.dettesFiscales, n1?.dettesFiscales, n?.dettesFiscales);
+    bilanRow('Autres dettes à CT',
+      n2?.autresDettes, n1?.autresDettes, n?.autresDettes);
+    bilanRow('TOTAL PASSIF',
+      n2?.totalPassif, n1?.totalPassif, n?.totalPassif, true);
+
+    y += 10;
+
+    // ── Résultat de l'exercice (récap) ──
+    doc.rect(mL, y, cW, 18).fill(YELLOW_OHADA);
+    doc.fillColor(DARK_TEXT).fontSize(8).font('Helvetica-Bold')
+      .text('Résultat de l\'exercice (N)', mL + 4, y + 5, { width: colLabel })
+      .text(n2 ? formatFCFA(n2.resultat) : '—', mL + colLabel + gap, y + 5, { width: colYear, align: 'right' })
+      .text(n1 ? formatFCFA(n1.resultat) : '—', mL + colLabel + gap + colYear + gap, y + 5, { width: colYear, align: 'right' })
+      .text(n ? formatFCFA(n.resultat) : '—', mL + colLabel + gap + (colYear + gap) * 2, y + 5, { width: colYear, align: 'right' });
+    y += 22;
+
+    // ── Note méthodologique ──
+    doc.rect(mL, y, cW, 36).fillAndStroke('#fffde7', YELLOW_OHADA);
+    doc.fillColor('#7d5a00').fontSize(7).font('Helvetica-Bold').text('ℹ  Note méthodologique :', mL + 6, y + 5);
+    doc.fillColor('#7d5a00').fontSize(7).font('Helvetica')
+      .text('Ce bilan est établi sur la base des transactions enregistrées dans SEDO. '
+        + 'La Trésorerie-Actif correspond au solde cumulé (entrées − sorties). '
+        + 'Les postes "Immobilisations", "Créances", "Emprunts" et "Dettes" nécessitent une saisie complémentaire. '
+        + 'Les exercices N-1 et N-2 affichent "—" si aucune transaction n\'a été enregistrée pour ces années. '
+        + 'Document indicatif — non certifié par un expert-comptable agréé OHADA.',
+        mL + 6, y + 15, { width: cW - 12 });
+    y += 40;
+
+    ohadaFooter(doc, `Bilan simplifié SYSCOHADA | Exercice ${yearN}`);
+    doc.flushPages();
     doc.end();
   } catch (err) {
     console.error(err);
@@ -496,137 +672,197 @@ router.get('/bilan.pdf', authenticate, requireRole('mpme'), async (req, res) => 
   }
 });
 
+// ─── 3. COMPTE DE RÉSULTAT SIMPLIFIÉ SYSCOHADA ──────────────────────────────
 // GET /api/transactions/resultat.pdf
 router.get('/resultat.pdf', authenticate, requireRole('mpme'), async (req, res) => {
   try {
     const profile = await prisma.mPMEProfile.findUnique({
       where: { userId: req.user.id },
-      include: { user: { select: { fullName: true, phone: true } } },
+      include: { user: { select: { fullName: true, phone: true, email: true } } },
     });
     if (!profile) return res.status(404).json({ error: 'Profil introuvable' });
 
-    const { startDate, endDate, periodLabel, filenameSlug } = resolvePeriod(req.query);
+    const { endDate, periodLabel, filenameSlug } = resolvePeriod(req.query);
+    const yearN = endDate.getFullYear();
+    const yearN1 = yearN - 1;
+    const yearN2 = yearN - 2;
 
-    const transactions = await prisma.transaction.findMany({
-      where: { mpmeId: profile.id, date: { gte: startDate, lte: endDate } },
-      orderBy: { date: 'asc' },
+    const [dataN, dataN1, dataN2] = await Promise.all([
+      getResultatAnnuel(profile.id, yearN),
+      getResultatAnnuel(profile.id, yearN1),
+      getResultatAnnuel(profile.id, yearN2),
+    ]);
+
+    const doc = new PDFDocument({
+      margins: { top: 20, left: 40, right: 40, bottom: 30 },
+      size: 'A4',
+      bufferPages: true,
     });
-
-    // Regrouper par catégorie
-    const produits = {}; // entrées
-    const charges = {};  // sorties
-    transactions.forEach(tx => {
-      const cat = tx.category || 'autre';
-      if (tx.type === 'entree') {
-        produits[cat] = (produits[cat] || 0) + tx.amount;
-      } else {
-        charges[cat] = (charges[cat] || 0) + tx.amount;
-      }
-    });
-
-    const totalProduits = Object.values(produits).reduce((s, v) => s + v, 0);
-    const totalCharges = Object.values(charges).reduce((s, v) => s + v, 0);
-    const resultatNet = totalProduits - totalCharges;
-
-    const doc = new PDFDocument({ margins: { top: 40, left: 40, right: 40, bottom: 0 }, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="compte_resultat_sedo_${filenameSlug}.pdf"`);
     doc.pipe(res);
 
     const pageW = doc.page.width;
-    const marginL = 40;
-    const contentW = pageW - marginL * 2;
-    let y = pdfHeader(doc, 'COMPTE DE RÉSULTAT', periodLabel, profile);
+    const mL = 40;
+    const cW = pageW - mL * 2;
 
-    // ── Résumé 3 cases ──
-    const bW = (contentW - 20) / 3;
-    [
-      { label: 'PRODUITS (ENTRÉES)', value: totalProduits, color: GREEN },
-      { label: 'CHARGES (SORTIES)', value: totalCharges, color: RED },
-      { label: 'RÉSULTAT NET', value: resultatNet, color: resultatNet >= 0 ? GREEN : RED },
-    ].forEach((b, i) => {
-      const bx = marginL + i * (bW + 10);
-      doc.rect(bx, y, bW, 48).fillAndStroke('#ffffff', '#e5e7eb');
-      doc.fontSize(8).font('Helvetica').fillColor('#6b7280').text(b.label, bx + 6, y + 7);
-      doc.fontSize(12).font('Helvetica-Bold').fillColor(b.color)
-        .text((b.label === 'RÉSULTAT NET' && resultatNet < 0 ? '-' : '') + formatFCFA(Math.abs(b.value)), bx + 6, y + 22, { width: bW - 12 });
-    });
-    y += 58;
+    let y = ohadaHeader(doc, 'COMPTE DE RÉSULTAT SIMPLIFIÉ (SYSCOHADA)', periodLabel, profile);
 
-    // ── Section Produits ──
-    doc.rect(marginL, y, contentW, 22).fill(GREEN);
-    doc.fillColor('white').fontSize(9).font('Helvetica-Bold').text('PRODUITS D\'EXPLOITATION', marginL + 8, y + 7);
-    doc.fillColor('white').fontSize(9).font('Helvetica-Bold').text('Montant', marginL + contentW - 95, y + 7, { width: 85, align: 'right' });
-    y += 24;
+    // ── Titre ──
+    doc.rect(mL, y, cW, 20).fill(GREEN_OHADA);
+    doc.fillColor('white').fontSize(10).font('Helvetica-Bold')
+      .text('COMPTE DE RÉSULTAT SIMPLIFIÉ (SYSCOHADA) – 3 DERNIERS EXERCICES', mL + 6, y + 6, { width: cW - 12, align: 'center' });
+    y += 22;
 
-    if (Object.keys(produits).length === 0) {
-      doc.rect(marginL, y, contentW, 24).fill('#f9fafb');
-      doc.fillColor('#6b7280').fontSize(8).font('Helvetica').text('Aucun produit enregistré sur cette période', marginL + 8, y + 8);
-      y += 26;
-    } else {
-      Object.entries(produits).forEach(([cat, val], i) => {
-        const bg = i % 2 === 0 ? '#ffffff' : '#f0fdf4';
-        doc.rect(marginL, y, contentW, 24).fill(bg);
-        doc.fillColor('#111827').fontSize(9).font('Helvetica').text(cat.charAt(0).toUpperCase() + cat.slice(1), marginL + 8, y + 8);
-        doc.fillColor(GREEN).fontSize(9).font('Helvetica-Bold').text('+' + formatFCFA(val), marginL + contentW - 95, y + 8, { width: 85, align: 'right' });
-        doc.moveTo(marginL, y + 24).lineTo(marginL + contentW, y + 24).strokeColor('#e5e7eb').lineWidth(0.5).stroke();
-        y += 24;
+    // ── Résumé exercice N ──
+    if (dataN) {
+      const bW = (cW - 10) / 3;
+      [
+        { label: `CHIFFRE D'AFFAIRES HT (${yearN})`, value: dataN.ca, color: GREEN_OHADA },
+        { label: `TOTAL CHARGES (${yearN})`, value: dataN.achats + dataN.stocks + dataN.chargesPerso + dataN.autresCharges, color: '#c0392b' },
+        { label: `RÉSULTAT NET (${yearN})`, value: dataN.resultatNet, color: dataN.resultatNet >= 0 ? GREEN_OHADA : '#c0392b' },
+      ].forEach((b, i) => {
+        const bx = mL + i * (bW + 5);
+        doc.rect(bx, y, bW, 32).fillAndStroke('#ffffff', '#cccccc');
+        doc.fillColor(GRAY_TEXT).fontSize(6.5).font('Helvetica').text(b.label, bx + 5, y + 4, { width: bW - 10 });
+        doc.fillColor(b.color).fontSize(10).font('Helvetica-Bold')
+          .text(formatFCFA(b.value), bx + 5, y + 16, { width: bW - 10 });
       });
+      y += 38;
     }
+
+    // ── Colonnes tableau ──
+    const colLabel = 250;
+    const colYear = 82;
+    const gap = 5;
+
+    doc.rect(mL, y, cW, 18).fill(BLUE_HDR);
+    doc.fillColor('white').fontSize(8).font('Helvetica-Bold')
+      .text('RUBRIQUES', mL + 4, y + 5, { width: colLabel })
+      .text(`N-2 (${yearN2}) FCFA`, mL + colLabel + gap, y + 5, { width: colYear, align: 'right' })
+      .text(`N-1 (${yearN1}) FCFA`, mL + colLabel + gap + colYear + gap, y + 5, { width: colYear, align: 'right' })
+      .text(`N   (${yearN}) FCFA`, mL + colLabel + gap + (colYear + gap) * 2, y + 5, { width: colYear, align: 'right' });
+    y += 20;
+
+    // Fonction ligne compte de résultat
+    let rowIdx = 0;
+    function resultatRow(label, vN2, vN1, vN, isTotal = false, isSousTotal = false) {
+      if (y > doc.page.height - 60) { doc.addPage(); y = 40; }
+
+      const rowH = isTotal ? 20 : 16;
+      const fSize = isTotal ? 9 : 8;
+      const fFont = isTotal || isSousTotal ? 'Helvetica-Bold' : 'Helvetica';
+      const bg = isTotal ? GREEN_OHADA
+        : isSousTotal ? '#dce8dc'
+          : rowIdx % 2 === 0 ? '#ffffff' : LIGHT_GRAY;
+
+      doc.rect(mL, y, cW, rowH).fill(bg);
+
+      const tColor = isTotal ? 'white' : DARK_TEXT;
+      doc.fillColor(tColor).fontSize(fSize).font(fFont)
+        .text(label, mL + 4, y + (rowH - fSize) / 2 + 1, { width: colLabel });
+
+      const xN2 = mL + colLabel + gap;
+      const xN1 = xN2 + colYear + gap;
+      const xN = xN1 + colYear + gap;
+
+      const renderV = (v, x) => {
+        if (v === null || v === undefined) {
+          doc.fillColor(isTotal ? 'white' : GRAY_TEXT).fontSize(fSize).font('Helvetica')
+            .text('—', x, y + (rowH - fSize) / 2 + 1, { width: colYear, align: 'right' });
+        } else {
+          const cColor = isTotal ? 'white' : (v < 0 ? '#c0392b' : DARK_TEXT);
+          doc.fillColor(cColor).fontSize(fSize).font(fFont)
+            .text(formatFCFA(v), x, y + (rowH - fSize) / 2 + 1, { width: colYear, align: 'right' });
+        }
+      };
+
+      renderV(vN2, xN2);
+      renderV(vN1, xN1);
+      renderV(vN, xN);
+
+      if (!isTotal)
+        doc.moveTo(mL, y + rowH).lineTo(mL + cW, y + rowH)
+          .strokeColor('#cccccc').lineWidth(0.3).stroke();
+
+      y += rowH;
+      rowIdx++;
+    }
+
+    const n2 = dataN2, n1 = dataN1, n = dataN;
+
+    resultatRow("Chiffre d'affaires (CA) HT",
+      n2?.ca, n1?.ca, n?.ca);
+    resultatRow('Autres produits d\'exploitation',
+      n2?.autresProduits, n1?.autresProduits, n?.autresProduits);
+
     // Sous-total produits
-    doc.rect(marginL, y, contentW, 22).fill('#dcfce7');
-    doc.fillColor('#166534').fontSize(9).font('Helvetica-Bold')
-      .text('Total Produits', marginL + 8, y + 7)
-      .text(formatFCFA(totalProduits), marginL + contentW - 95, y + 7, { width: 85, align: 'right' });
-    y += 30;
+    const totalProd = (d) => d ? (d.ca || 0) + (d.autresProduits || 0) : null;
+    resultatRow('TOTAL PRODUITS D\'EXPLOITATION',
+      totalProd(n2), totalProd(n1), totalProd(n), false, true);
 
-    // ── Section Charges ──
-    doc.rect(marginL, y, contentW, 22).fill('#111827');
-    doc.fillColor('white').fontSize(9).font('Helvetica-Bold').text('CHARGES D\'EXPLOITATION', marginL + 8, y + 7);
-    doc.fillColor('white').fontSize(9).font('Helvetica-Bold').text('Montant', marginL + contentW - 95, y + 7, { width: 85, align: 'right' });
-    y += 24;
+    y += 4;
 
-    if (Object.keys(charges).length === 0) {
-      doc.rect(marginL, y, contentW, 24).fill('#f9fafb');
-      doc.fillColor('#6b7280').fontSize(8).font('Helvetica').text('Aucune charge enregistrée sur cette période', marginL + 8, y + 8);
-      y += 26;
-    } else {
-      Object.entries(charges).forEach(([cat, val], i) => {
-        if (y > doc.page.height - 100) { doc.addPage(); y = 40; }
-        const bg = i % 2 === 0 ? '#ffffff' : '#fff1f2';
-        doc.rect(marginL, y, contentW, 24).fill(bg);
-        doc.fillColor('#111827').fontSize(9).font('Helvetica').text(cat.charAt(0).toUpperCase() + cat.slice(1), marginL + 8, y + 8);
-        doc.fillColor(RED).fontSize(9).font('Helvetica-Bold').text('-' + formatFCFA(val), marginL + contentW - 95, y + 8, { width: 85, align: 'right' });
-        doc.moveTo(marginL, y + 24).lineTo(marginL + contentW, y + 24).strokeColor('#e5e7eb').lineWidth(0.5).stroke();
-        y += 24;
-      });
+    resultatRow('Achats et variation de stocks',
+      n2?.achats, n1?.achats, n?.achats);
+    resultatRow('Charges de personnel (salaires + CNSS)',
+      n2?.chargesPerso, n1?.chargesPerso, n?.chargesPerso);
+    resultatRow('Autres charges d\'exploitation',
+      n2?.autresCharges, n1?.autresCharges, n?.autresCharges);
+    resultatRow('Dotations aux amortissements',
+      n2?.amortissements, n1?.amortissements, n?.amortissements);
+
+    y += 2;
+    resultatRow('Résultat d\'exploitation (EBIT)',
+      n2?.ebit, n1?.ebit, n?.ebit, false, true);
+
+    y += 4;
+    resultatRow('Charges et produits financiers',
+      n2?.chargesFinancieres, n1?.chargesFinancieres, n?.chargesFinancieres);
+    resultatRow('Résultat avant impôt',
+      n2?.resultatAvantImpot, n1?.resultatAvantImpot, n?.resultatAvantImpot, false, true);
+
+    y += 4;
+    resultatRow('Impôt sur les bénéfices (IBF / AIBE)',
+      n2?.impot, n1?.impot, n?.impot);
+
+    y += 2;
+    resultatRow('RÉSULTAT NET',
+      n2?.resultatNet, n1?.resultatNet, n?.resultatNet, true);
+
+    y += 10;
+
+    // ── Interprétation exercice N ──
+    if (dataN) {
+      const isPositif = dataN.resultatNet >= 0;
+      const msg = isPositif
+        ? `L'entreprise est bénéficiaire sur l'exercice ${yearN}. Résultat net : ${formatFCFA(dataN.resultatNet)}. `
+        + `Rentabilité : ${dataN.ca > 0 ? Math.round(dataN.resultatNet / dataN.ca * 100) : 0}%.`
+        : `L'entreprise est déficitaire sur l'exercice ${yearN}. Déficit : ${formatFCFA(Math.abs(dataN.resultatNet))}. `
+        + 'Analysez vos principales charges pour optimiser votre résultat.';
+      const bgColor = isPositif ? '#e8f5e9' : '#ffebee';
+      const bColor = isPositif ? GREEN_OHADA : '#c0392b';
+
+      doc.rect(mL, y, cW, 24).fillAndStroke(bgColor, bColor);
+      doc.fillColor(bColor).fontSize(8).font('Helvetica-Bold')
+        .text(isPositif ? '✓  Exercice bénéficiaire' : '⚠  Exercice déficitaire', mL + 8, y + 5);
+      doc.fillColor(isPositif ? '#1b5e20' : '#b71c1c').fontSize(7.5).font('Helvetica')
+        .text(msg, mL + 8, y + 14, { width: cW - 16 });
+      y += 28;
     }
-    // Sous-total charges
-    doc.rect(marginL, y, contentW, 22).fill('#fee2e2');
-    doc.fillColor('#991b1b').fontSize(9).font('Helvetica-Bold')
-      .text('Total Charges', marginL + 8, y + 7)
-      .text(formatFCFA(totalCharges), marginL + contentW - 95, y + 7, { width: 85, align: 'right' });
-    y += 30;
 
-    // ── Résultat Net ──
-    const resColor = resultatNet >= 0 ? GREEN : RED;
-    const resBg = resultatNet >= 0 ? '#dcfce7' : '#fee2e2';
-    doc.rect(marginL, y, contentW, 32).fill(resColor);
-    doc.fillColor('white').fontSize(11).font('Helvetica-Bold')
-      .text('RÉSULTAT NET DE LA PÉRIODE', marginL + 8, y + 9)
-      .text((resultatNet < 0 ? '-' : '+') + formatFCFA(Math.abs(resultatNet)), marginL + contentW - 110, y + 9, { width: 100, align: 'right' });
-    y += 40;
+    // ── Note méthodologique ──
+    doc.rect(mL, y, cW, 36).fillAndStroke('#fffde7', YELLOW_OHADA);
+    doc.fillColor('#7d5a00').fontSize(7).font('Helvetica-Bold').text('ℹ  Note méthodologique :', mL + 6, y + 5);
+    doc.fillColor('#7d5a00').fontSize(7).font('Helvetica')
+      .text('Le Chiffre d\'affaires correspond aux transactions de type "Vente". Les charges de personnel incluent les saisies catégorisées "Dépense". '
+        + 'Les postes "Amortissements", "Charges financières" et "Impôt IBF/AIBE" nécessitent une saisie complémentaire pour être complets. '
+        + 'Les exercices N-1 et N-2 affichent "—" en l\'absence de données enregistrées pour ces années. '
+        + 'Document indicatif — non certifié par un expert-comptable agréé OHADA.',
+        mL + 6, y + 15, { width: cW - 12 });
 
-    // Interprétation
-    const interpMsg = resultatNet > 0
-      ? `Votre activité est bénéficiaire sur cette période. Bénéfice net : ${formatFCFA(resultatNet)}.`
-      : resultatNet < 0
-      ? `Votre activité est déficitaire sur cette période. Déficit : ${formatFCFA(Math.abs(resultatNet))}. Analysez vos principales charges pour optimiser.`
-      : `Vos produits et charges s'équilibrent exactement sur cette période.`;
-    doc.rect(marginL, y, contentW, 36).fillAndStroke(resBg, resultatNet >= 0 ? '#86efac' : '#fca5a5');
-    doc.fillColor(resultatNet >= 0 ? '#166534' : '#991b1b').fontSize(8).font('Helvetica').text(interpMsg, marginL + 10, y + 10, { width: contentW - 20 });
-
-    pdfFooter(doc, `Compte de résultat | ${periodLabel}`);
+    ohadaFooter(doc, `Compte de résultat SYSCOHADA | Exercice ${yearN}`);
+    doc.flushPages();
     doc.end();
   } catch (err) {
     console.error(err);

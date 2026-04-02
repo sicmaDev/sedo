@@ -17,7 +17,7 @@ export default function Register() {
   const [form, setForm] = useState({
     fullName: '', email: '', password: '',
     company: '', sector: 'Commerce général', location: 'Cotonou, Bénin',
-    employees: '1', createdYear: String(new Date().getFullYear()),
+    employees: '', createdYear: String(new Date().getFullYear()),
     institution: '',
   });
   const [error, setError] = useState('');
@@ -66,12 +66,6 @@ export default function Register() {
           </div>
         )}
 
-        {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-3">
-            <p className="text-xs text-red-600 font-medium">{error}</p>
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-3">
           <Field label="Nom complet" type="text" value={form.fullName} onChange={set('fullName')} placeholder="Kouassi Ama" required />
 
@@ -105,13 +99,20 @@ export default function Register() {
             </div>
             <Field label="Localisation" type="text" value={form.location} onChange={set('location')} placeholder="Cotonou, Bénin" />
             <div className="grid grid-cols-2 gap-2">
-              <Field label="Nombre d'employés" type="number" value={form.employees} onChange={set('employees')} placeholder="1" />
+              <Field label="Nombre d'employés" optional type="number" value={form.employees} onChange={set('employees')} placeholder="Ex : 3" min="1" />
               <Field label="Année de création" type="number" value={form.createdYear} onChange={set('createdYear')} placeholder="2021" />
             </div>
           </>}
 
           {role === 'imf' && (
             <Field label="Nom de l'institution" type="text" value={form.institution} onChange={set('institution')} placeholder="PADME Microfinance" required />
+          )}
+
+          {error && (
+            <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <span className="text-red-500 text-base flex-shrink-0 mt-0.5">⚠</span>
+              <p className="text-xs text-red-600 font-semibold leading-relaxed">{error}</p>
+            </div>
           )}
 
           <button type="submit" disabled={loading}
@@ -129,10 +130,13 @@ export default function Register() {
   );
 }
 
-function Field({ label, ...props }) {
+function Field({ label, optional, ...props }) {
   return (
     <div>
-      <label className="text-xs text-gray-500 font-medium">{label}</label>
+      <label className="text-xs text-gray-500 font-medium">
+        {label}
+        {optional && <span className="ml-1.5 text-[10px] font-normal text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">optionnel</span>}
+      </label>
       <input {...props} className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-sedo-green" />
     </div>
   );

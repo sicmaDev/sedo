@@ -22,7 +22,12 @@ router.get('/profile', authenticate, requireRole('mpme'), async (req, res) => {
 
 // PUT /api/mpme/profile
 router.put('/profile', authenticate, requireRole('mpme'), async (req, res) => {
-  const { company, sector, location, employees, createdYear, ifuStatus, rccmStatus, npiStatus } = req.body;
+  const {
+    company, sector, location, employees, createdYear, langue,
+    ifuStatus, rccmStatus, npiStatus,
+    formeJuridique, numeroIFU, numeroRCCM, numeroNPI,
+    dateNaissance, numeroCIP, adressePrecise, objetSocial, regimeFiscal, capitalSocial,
+  } = req.body;
   try {
     const profile = await prisma.mPMEProfile.update({
       where: { userId: req.user.id },
@@ -30,11 +35,23 @@ router.put('/profile', authenticate, requireRole('mpme'), async (req, res) => {
         ...(company && { company }),
         ...(sector && { sector }),
         ...(location && { location }),
-        ...(employees && { employees: parseInt(employees) }),
-        ...(createdYear && { createdYear: parseInt(createdYear) }),
+        ...(employees   !== undefined && employees   !== '' && { employees:   parseInt(employees)   || null }),
+        ...(createdYear !== undefined && createdYear !== '' && { createdYear: parseInt(createdYear) || null }),
+        ...(langue      !== undefined && { langue }),
         ...(ifuStatus && { ifuStatus }),
         ...(rccmStatus && { rccmStatus }),
         ...(npiStatus && { npiStatus }),
+        // Dossier de formalisation (champs optionnels — on accepte chaîne vide pour effacer)
+        ...(formeJuridique  !== undefined && { formeJuridique }),
+        ...(numeroIFU       !== undefined && { numeroIFU }),
+        ...(numeroRCCM      !== undefined && { numeroRCCM }),
+        ...(numeroNPI       !== undefined && { numeroNPI }),
+        ...(dateNaissance   !== undefined && { dateNaissance }),
+        ...(numeroCIP       !== undefined && { numeroCIP }),
+        ...(adressePrecise  !== undefined && { adressePrecise }),
+        ...(objetSocial     !== undefined && { objetSocial }),
+        ...(regimeFiscal    !== undefined && { regimeFiscal }),
+        ...(capitalSocial   !== undefined && { capitalSocial }),
       },
     });
     res.json(profile);

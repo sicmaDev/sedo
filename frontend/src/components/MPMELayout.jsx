@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { Home, BarChart2, Award, Wallet, User, BookOpen, ClipboardList } from 'lucide-react';
+import { Home, BarChart2, Award, Wallet, User, BookOpen, ClipboardList, MoreHorizontal, X, LogOut } from 'lucide-react';
 
 const tabs = [
   { path: '/mpme', label: 'Accueil', Icon: Home, exact: true },
@@ -14,6 +14,11 @@ const tabs = [
   { path: '/mpme/secteur', label: 'Secteur', Icon: BookOpen },
   { path: '/mpme/profil', label: 'Profil', Icon: User },
 ];
+
+// Onglets affichés dans la barre du bas (mobile) — max 5 visibles
+const primaryTabs = tabs.slice(0, 4); // Accueil, Comptabilité, Formalisation, Score
+// Onglets dans le menu "Plus"
+const moreTabs = tabs.slice(4);       // Financement, Secteur, Profil
 
 const pageTitles = {
   '/mpme': 'Tableau de bord',

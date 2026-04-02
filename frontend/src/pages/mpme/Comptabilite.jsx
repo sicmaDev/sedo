@@ -2,6 +2,14 @@ import { useState, useRef } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useVoiceGuide } from '@/lib/VoiceGuideContext';
+import {
+  ShoppingBag, Leaf, Wheat, Scissors, Truck, Utensils,
+  LayoutGrid, Mic, Phone,
+  TrendingUp, TrendingDown, BarChart2,
+  BookOpen, FileText, ClipboardList, Scale,
+  Inbox, Lightbulb, Radio, Loader2,
+  RotateCcw, Check,
+} from 'lucide-react';
 
 function toISODate(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -61,8 +69,15 @@ function downloadDoc(endpoint, from, to, filename) {
     .catch(() => alert('Erreur lors de la génération du document PDF'));
 }
 
-const sectors = ['🏪 Commerce', '🐄 Élevage', '🌾 Agriculture', '✂️ Artisanat', '🚗 Transport', '🍽️ Restauration'];
-const LANGS = ['🇫🇷 Français', 'Fon', 'Yoruba', 'Adja'];
+const sectors = [
+  { Icon: ShoppingBag, label: 'Commerce' },
+  { Icon: Leaf,        label: 'Élevage' },
+  { Icon: Wheat,       label: 'Agriculture' },
+  { Icon: Scissors,    label: 'Artisanat' },
+  { Icon: Truck,       label: 'Transport' },
+  { Icon: Utensils,    label: 'Restauration' },
+];
+const LANGS = ['Français', 'Fon', 'Yoruba', 'Adja'];
 
 const PRESETS = [
   { key: 'month', label: 'Ce mois' },
@@ -113,7 +128,7 @@ function FicheComptable() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base lg:text-lg font-bold text-gray-800">📒 Fiche comptable</h3>
+          <h3 className="text-base lg:text-lg font-bold text-gray-800 flex items-center gap-2"><BookOpen className="w-4 h-4 text-sedo-green" /> Fiche comptable</h3>
           <p className="text-xs text-gray-400">
             {from === to ? formatDate(from) : `${formatDate(from)} → ${formatDate(to)}`}
           </p>
@@ -160,12 +175,12 @@ function FicheComptable() {
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-2 lg:gap-4">
         {[
-          { label: 'Entrées', value: totalEntrees, color: 'text-sedo-green', bg: 'bg-green-50', border: 'border-green-100', icon: '💰' },
-          { label: 'Sorties', value: totalSorties, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', icon: '💸' },
-          { label: 'Solde net', value: solde, color: solde >= 0 ? 'text-sedo-green' : 'text-red-500', bg: solde >= 0 ? 'bg-green-50' : 'bg-red-50', border: solde >= 0 ? 'border-green-100' : 'border-red-100', icon: '📊' },
+          { label: 'Entrées',  value: totalEntrees, color: 'text-sedo-green', bg: 'bg-green-50', border: 'border-green-100', Icon: TrendingUp },
+          { label: 'Sorties',  value: totalSorties, color: 'text-red-500',    bg: 'bg-red-50',   border: 'border-red-100',   Icon: TrendingDown },
+          { label: 'Solde net',value: solde, color: solde >= 0 ? 'text-sedo-green' : 'text-red-500', bg: solde >= 0 ? 'bg-green-50' : 'bg-red-50', border: solde >= 0 ? 'border-green-100' : 'border-red-100', Icon: BarChart2 },
         ].map((card) => (
           <div key={card.label} className={`${card.bg} border ${card.border} rounded-xl p-2.5 lg:p-4`}>
-            <p className="text-lg lg:text-xl">{card.icon}</p>
+            <card.Icon className={`w-5 h-5 ${card.color}`} />
             <p className="text-[10px] lg:text-xs text-gray-500 font-medium mt-1">{card.label}</p>
             <p className={`text-xs lg:text-sm font-bold ${card.color} mt-0.5 leading-tight`}>
               {isLoading ? '...' : (card.label === 'Solde net' && card.value < 0 ? '-' : '') + formatFCFA(Math.abs(card.value))}
@@ -181,7 +196,7 @@ function FicheComptable() {
         )}
         {!isLoading && transactions.length === 0 && (
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center">
-            <p className="text-3xl mb-2">📭</p>
+            <Inbox className="w-10 h-10 text-gray-300 mx-auto mb-2" />
             <p className="text-sm font-semibold text-gray-600">Aucune transaction sur cette période</p>
             <p className="text-xs text-gray-400 mt-1">Commencez par enregistrer une transaction.</p>
           </div>
@@ -194,8 +209,10 @@ function FicheComptable() {
             </div>
             {txs.map((tx, i) => (
               <div key={tx.id} className={`flex items-center gap-3 px-4 py-3 ${i < txs.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-base flex-shrink-0 ${tx.type === 'entree' ? 'bg-green-100' : 'bg-red-100'}`}>
-                  {tx.type === 'entree' ? '💰' : '💸'}
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${tx.type === 'entree' ? 'bg-green-100' : 'bg-red-100'}`}>
+                  {tx.type === 'entree'
+                    ? <TrendingUp className="w-4 h-4 text-sedo-green" />
+                    : <TrendingDown className="w-4 h-4 text-red-500" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs lg:text-sm font-semibold text-gray-800 truncate">
@@ -217,7 +234,7 @@ function FicheComptable() {
       {/* Documents comptables */}
       <div className={`rounded-2xl border transition-all ${transactions.length > 0 ? 'bg-gray-50 border-gray-100' : 'opacity-40 pointer-events-none bg-gray-50 border-gray-100'}`}>
         <div className="px-4 pt-4 pb-2">
-          <p className="text-xs font-bold text-gray-700">📄 Documents comptables</p>
+          <p className="text-xs font-bold text-gray-700 flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Documents comptables</p>
           <p className="text-[10px] text-gray-400 mt-0.5">
             {transactions.length > 0
               ? `${transactions.length} transaction(s) · ${formatDate(from)} → ${formatDate(to)}`
@@ -226,9 +243,9 @@ function FicheComptable() {
         </div>
         <div className="grid grid-cols-3 gap-2 px-4 pb-4">
           {[
-            { key: 'journal', endpoint: 'journal.pdf', label: 'Journal', icon: '📋', filename: 'journal_sedo', desc: 'Toutes les transactions' },
-            { key: 'bilan', endpoint: 'bilan.pdf', label: 'Bilan', icon: '⚖️', filename: 'bilan_sedo', desc: 'Actif / Passif' },
-            { key: 'resultat', endpoint: 'resultat.pdf', label: 'Résultat', icon: '📊', filename: 'compte_resultat_sedo', desc: 'Produits / Charges' },
+            { key: 'journal', endpoint: 'journal.pdf', label: 'Journal', Icon: ClipboardList, filename: 'journal_sedo', desc: 'Toutes les transactions' },
+            { key: 'bilan', endpoint: 'bilan.pdf', label: 'Bilan', Icon: Scale, filename: 'bilan_sedo', desc: 'Actif / Passif' },
+            { key: 'resultat', endpoint: 'resultat.pdf', label: 'Résultat', Icon: BarChart2, filename: 'compte_resultat_sedo', desc: 'Produits / Charges' },
           ].map(doc => (
             <button
               key={doc.key}
@@ -239,7 +256,9 @@ function FicheComptable() {
               disabled={downloading !== null || transactions.length === 0}
               className="flex flex-col items-center gap-1.5 bg-white border border-gray-200 rounded-xl p-3 hover:border-sedo-green hover:bg-green-50 transition-all disabled:opacity-60"
             >
-              <span className="text-xl">{downloading === doc.key ? '⏳' : doc.icon}</span>
+              {downloading === doc.key
+                ? <Loader2 className="w-5 h-5 text-sedo-green animate-spin" />
+                : <doc.Icon className="w-5 h-5 text-gray-500" />}
               <span className="text-xs font-bold text-gray-800">{doc.label}</span>
               <span className="text-[10px] text-gray-400 text-center leading-tight">{doc.desc}</span>
             </button>
@@ -353,11 +372,15 @@ export default function Comptabilite() {
 
         {/* Tabs saisie */}
         <div className="flex p-2 gap-1">
-          {[{ id: 'pictogrammes', icon: '🎨', label: 'Pictogrammes' }, { id: 'vocal', icon: '🎙️', label: 'Vocal' }, { id: 'ussd', icon: '📞', label: 'USSD' }].map((t) => (
+          {[
+            { id: 'pictogrammes', Icon: LayoutGrid, label: 'Pictogrammes' },
+            { id: 'vocal',        Icon: Mic,        label: 'Vocal' },
+            { id: 'ussd',         Icon: Phone,      label: 'USSD' },
+          ].map((t) => (
             <button key={t.id} {...(t.id === 'vocal' ? { 'data-guide': 'tab_vocal' } : {})}
               onClick={() => { setActiveTab(t.id); reportAction?.(t.id === 'vocal' ? 'vocal_tab' : 'wrong_tab'); }}
               className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeTab === t.id ? 'bg-sedo-green text-white shadow-sm' : 'text-gray-400 hover:bg-gray-50'}`}>
-              <span>{t.icon}</span><span>{t.label}</span>
+              <t.Icon className="w-3.5 h-3.5" /><span>{t.label}</span>
             </button>
           ))}
         </div>
@@ -382,10 +405,10 @@ export default function Comptabilite() {
               {step === 1 && (
                 <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
                   {sectors.map((s) => (
-                    <button key={s} onClick={() => { setSector(s); setStep(2); }}
-                      className={`rounded-xl p-2.5 border-2 flex flex-col items-center gap-1 transition-all active:scale-95 ${sector === s ? 'border-sedo-green bg-green-50' : 'border-gray-100 bg-gray-50'}`}>
-                      <span className="text-2xl">{s.split(' ')[0]}</span>
-                      <span className="text-[10px] font-medium text-gray-600">{s.split(' ')[1]}</span>
+                    <button key={s.label} onClick={() => { setSector(s.label); setStep(2); }}
+                      className={`rounded-xl p-2.5 border-2 flex flex-col items-center gap-1 transition-all active:scale-95 ${sector === s.label ? 'border-sedo-green bg-green-50' : 'border-gray-100 bg-gray-50'}`}>
+                      <s.Icon className={`w-6 h-6 ${sector === s.label ? 'text-sedo-green' : 'text-gray-500'}`} />
+                      <span className="text-[10px] font-medium text-gray-600">{s.label}</span>
                     </button>
                   ))}
                 </div>
@@ -395,13 +418,16 @@ export default function Comptabilite() {
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <button onClick={() => setStep(1)} className="text-gray-400 text-sm">‹</button>
-                    <p className="text-xs font-bold text-gray-800">Type — {sector}</p>
+                    <p className="text-xs font-bold text-gray-800">Type — {sector || '—'}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    {[{ icon: '💰', label: "Entrée", value: 'entree' }, { icon: '💸', label: "Sortie", value: 'sortie' }].map((t) => (
+                    {[
+                      { Icon: TrendingUp,   label: 'Entrée', value: 'entree', color: 'text-sedo-green', activeBg: 'border-sedo-green bg-green-50' },
+                      { Icon: TrendingDown, label: 'Sortie', value: 'sortie', color: 'text-red-500',    activeBg: 'border-red-300 bg-red-50' },
+                    ].map((t) => (
                       <button key={t.value} onClick={() => { setType(t.value); setStep(3); }}
-                        className={`rounded-2xl p-4 border-2 flex flex-col items-center gap-2 transition-all active:scale-95 ${type === t.value ? 'border-sedo-green bg-green-50' : 'border-gray-100 bg-gray-50'}`}>
-                        <span className="text-3xl">{t.icon}</span>
+                        className={`rounded-2xl p-4 border-2 flex flex-col items-center gap-2 transition-all active:scale-95 ${type === t.value ? t.activeBg : 'border-gray-100 bg-gray-50'}`}>
+                        <t.Icon className={`w-8 h-8 ${type === t.value ? t.color : 'text-gray-400'}`} />
                         <span className="text-xs font-semibold text-gray-700">{t.label}</span>
                       </button>
                     ))}
@@ -413,7 +439,12 @@ export default function Comptabilite() {
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <button onClick={() => setStep(2)} className="text-gray-400 text-sm">‹</button>
-                    <p className="text-xs font-bold text-gray-800">Montant — {type === 'entree' ? '💰 Entrée' : '💸 Sortie'}</p>
+                    <p className="text-xs font-bold text-gray-800 flex items-center gap-1">
+                      Montant —
+                      {type === 'entree'
+                        ? <><TrendingUp className="w-3.5 h-3.5 text-sedo-green" /> Entrée</>
+                        : <><TrendingDown className="w-3.5 h-3.5 text-red-500" /> Sortie</>}
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Montant en FCFA" min="0"
@@ -421,10 +452,13 @@ export default function Comptabilite() {
                     <input type="text" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Description (optionnel)"
                       className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-gray-800 text-sm focus:outline-none focus:border-sedo-green" />
                     <div className="grid grid-cols-2 gap-2 pt-1">
-                      <button onClick={reset} className="py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500 font-medium">↩️ Recommencer</button>
+                      <button onClick={reset} className="py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500 font-medium flex items-center justify-center gap-1.5">
+                        <RotateCcw className="w-3.5 h-3.5" /> Recommencer
+                      </button>
                       <button onClick={handleSave} disabled={isPending}
-                        className="py-2.5 bg-sedo-green text-white rounded-xl text-sm font-bold disabled:opacity-60">
-                        {isPending ? 'Enregistrement...' : '✅ Enregistrer'}
+                        className="py-2.5 bg-sedo-green text-white rounded-xl text-sm font-bold disabled:opacity-60 flex items-center justify-center gap-1.5">
+                        {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        {isPending ? 'Enregistrement...' : 'Enregistrer'}
                       </button>
                     </div>
                   </div>
@@ -444,8 +478,8 @@ export default function Comptabilite() {
               </div>
               <div className="flex flex-col items-center gap-3 py-2">
                 <button data-guide="mic_button" onClick={isListening ? stopListening : startListening}
-                  className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl shadow-lg transition-all ${isListening ? 'bg-red-500 animate-pulse scale-110' : 'bg-sedo-green'}`}>
-                  🎤
+                  className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all ${isListening ? 'bg-red-500 animate-pulse scale-110' : 'bg-sedo-green'}`}>
+                  <Mic className="w-8 h-8 text-white" />
                 </button>
                 <p className="text-xs text-gray-500 text-center">{isListening ? 'Écoute en cours... Appuyez pour arrêter' : 'Appuyez sur le micro pour commencer'}</p>
                 {transcript && (
@@ -454,12 +488,15 @@ export default function Comptabilite() {
                     <p className="text-sm text-gray-700">{transcript}</p>
                     {parsedTx && (
                       <div className="mt-2 flex gap-2">
-                        <span className="text-xs bg-white border border-green-200 rounded-lg px-2 py-1">
-                          {parsedTx.type === 'entree' ? '💰' : '💸'} {parsedTx.amount} FCFA
+                        <span className="text-xs bg-white border border-green-200 rounded-lg px-2 py-1 flex items-center gap-1">
+                          {parsedTx.type === 'entree'
+                            ? <TrendingUp className="w-3 h-3 text-sedo-green" />
+                            : <TrendingDown className="w-3 h-3 text-red-500" />}
+                          {parsedTx.amount} FCFA
                         </span>
                         <button data-guide="confirm_button" onClick={() => { saveVoiceTx(); reportAction?.('confirmed'); }} disabled={isPending}
-                          className="flex-1 text-xs bg-sedo-green text-white rounded-lg px-3 py-1 font-bold">
-                          ✅ Confirmer
+                          className="flex-1 text-xs bg-sedo-green text-white rounded-lg px-3 py-1 font-bold flex items-center justify-center gap-1">
+                          <Check className="w-3 h-3" /> Confirmer
                         </button>
                       </div>
                     )}
@@ -467,7 +504,7 @@ export default function Comptabilite() {
                 )}
               </div>
               <div className="bg-green-50 rounded-xl p-3">
-                <p className="text-[10px] font-bold text-sedo-green mb-1">💡 Exemples</p>
+                <p className="text-[10px] font-bold text-sedo-green mb-1 flex items-center gap-1"><Lightbulb className="w-3 h-3" /> Exemples</p>
                 {['"J\'ai reçu 15000 francs pour une vente"', '"J\'ai dépensé 8500 francs pour des marchandises"'].map((ex) => (
                   <p key={ex} className="text-[10px] text-green-700 py-1 border-b border-green-100 last:border-0">{ex}</p>
                 ))}
@@ -494,13 +531,17 @@ export default function Comptabilite() {
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-2">
-                  <button onClick={() => setUssdInput('')} className="bg-red-700 text-white rounded-lg py-2 text-xs font-bold">↩️ Retour</button>
-                  <button onClick={() => showToast('📱 USSD — Intégration Africa\'s Talking en cours')}
-                    className="bg-sedo-green text-white rounded-lg py-2 text-xs font-bold">✅ Valider</button>
+                  <button onClick={() => setUssdInput('')} className="bg-red-700 text-white rounded-lg py-2 text-xs font-bold flex items-center justify-center gap-1">
+                    <RotateCcw className="w-3 h-3" /> Retour
+                  </button>
+                  <button onClick={() => showToast('USSD — Intégration Africa\'s Talking en cours')}
+                    className="bg-sedo-green text-white rounded-lg py-2 text-xs font-bold flex items-center justify-center gap-1">
+                    <Check className="w-3 h-3" /> Valider
+                  </button>
                 </div>
               </div>
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
-                <p className="text-xs font-bold text-blue-700">📡 USSD via Africa's Talking</p>
+                <p className="text-xs font-bold text-blue-700 flex items-center gap-1"><Radio className="w-3.5 h-3.5" /> USSD via Africa's Talking</p>
                 <p className="text-[10px] text-blue-600 mt-0.5">Composez le *123# depuis n'importe quel téléphone, même sans internet.</p>
               </div>
             </div>

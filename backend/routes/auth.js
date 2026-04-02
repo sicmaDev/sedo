@@ -37,7 +37,7 @@ router.post('/register', async (req, res) => {
           company,
           sector,
           location: location || 'Cotonou, Bénin',
-          employees: employees ? parseInt(employees) : 1,
+          employees:   employees   ? parseInt(employees)   : null,
           createdYear: createdYear ? parseInt(createdYear) : new Date().getFullYear(),
         },
       };

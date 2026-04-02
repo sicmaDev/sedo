@@ -5,6 +5,5 @@ numpy
 scipy
 python-multipart
 soundfile
-transformers
+openai-whisper
 torch
-sentencepiece
