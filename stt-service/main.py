@@ -63,7 +63,7 @@ NOMBRES_FON = {
     "ja kε ɖo xo": 1000, "jake ɖokpo": 1000, "ca ke ɖokpo": 1000,
     "nucaki ɖokpo": 1000, "nucaki ɖokpoo": 1000,
     "ciaki ɖokpo": 1000, "ciaki ɖokpoo": 1000, "ciaki ɖokpó": 1000,
-    "ca xe ɖokpo": 1000, "ca ke ɖokpo": 1000,
+    "ca xe ɖokpo": 1000,
     "kpocya kido kpo": 1000, "cya kido kpo": 1000,
     "cea kido kpo": 1000, "cea kyi ɖo ku": 1000,
     "ci aki ɖokpoo": 1000, "ciakido kpo": 1000,
