@@ -5,7 +5,6 @@ import { useVoiceGuide } from '@/lib/VoiceGuideContext';
 import { Grid3x3, Mic, Phone, ArrowUpCircle, ArrowDownCircle, Check, Lightbulb, Radio, DollarSign } from 'lucide-react';
 
 const sectors = ['🏪 Commerce', '🐄 Élevage', '🌾 Agriculture', '✂️ Artisanat', '🚗 Transport', '🍽️ Restauration'];
-const LANGS = ['🇫🇷 Français', 'Fon', 'Yoruba', 'Adja'];
 
 export default function Comptabilite() {
   const queryClient = useQueryClient();
@@ -20,8 +19,8 @@ export default function Comptabilite() {
   const [ussdInput, setUssdInput] = useState('');
 
   const [isListening, setIsListening] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [selectedLang, setSelectedLang] = useState('🇫🇷 Français');
   const [parsedTx, setParsedTx] = useState(null);
   const mediaRef = useRef(null);
   const chunksRef = useRef([]);
@@ -59,11 +58,11 @@ export default function Comptabilite() {
       mr.ondataavailable = (e) => chunksRef.current.push(e.data);
       mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
+        setIsAnalyzing(true);
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const formData = new FormData();
         formData.append('audio', blob, 'recording.webm');
-        const langCode = selectedLang.includes('Fon') ? 'fon' : selectedLang.includes('Yoruba') ? 'yoruba' : selectedLang.includes('Adja') ? 'adja' : 'fr';
-        formData.append('language', langCode);
+        formData.append('language', 'fon');
         try {
           const res = await api.post('/stt/transcribe', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
           const text = res.data.text;
@@ -74,6 +73,7 @@ export default function Comptabilite() {
             setParsedTx({ amount: String(donnees.montant), type: typeFromAction });
           }
         } catch { setTranscript('Service STT indisponible. Veuillez réessayer.'); }
+        finally { setIsAnalyzing(false); }
       };
       mr.start();
       setIsListening(true);
@@ -191,18 +191,19 @@ export default function Comptabilite() {
       {activeTab === 'vocal' && (
         <div className="space-y-4 lg:space-y-6">
           <div className="bg-white rounded-2xl p-5 lg:p-8 shadow-sm border border-gray-100">
-            <div className="flex gap-2 mb-4 lg:mb-6 flex-wrap">
-              {LANGS.map((l) => (
-                <button key={l} {...(l === LANGS[0] ? { 'data-guide': 'lang_selector' } : {})} onClick={() => { setSelectedLang(l); reportAction?.('lang_selected'); }}
-                  className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-full text-xs lg:text-sm font-medium border transition-all ${selectedLang === l ? 'bg-sedo-green text-white border-sedo-green' : 'border-gray-200 text-gray-500'}`}>{l}</button>
-              ))}
-            </div>
             <div className="flex flex-col items-center gap-4 lg:gap-6 py-4">
               <button data-guide="mic_button" onClick={isListening ? stopListening : startListening}
                 className={`w-20 h-20 lg:w-32 lg:h-32 rounded-full flex items-center justify-center shadow-lg transition-all ${isListening ? 'bg-red-500 animate-pulse scale-110' : 'bg-sedo-green'}`}>
                 <Mic className="w-8 h-8 lg:w-12 lg:h-12 text-white" />
               </button>
-              <p className="text-sm lg:text-base text-gray-500 text-center">{isListening ? 'Écoute en cours... Appuyez pour arrêter' : 'Appuyez sur le micro pour commencer'}</p>
+              {isAnalyzing ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-6 h-6 border-2 border-sedo-green border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm lg:text-base text-sedo-green font-medium text-center">Analyse de votre enregistrement en cours...</p>
+                </div>
+              ) : (
+                <p className="text-sm lg:text-base text-gray-500 text-center">{isListening ? 'Écoute en cours... Appuyez pour arrêter' : 'Appuyez sur le micro pour commencer'}</p>
+              )}
               {transcript && (
                 <div className="w-full bg-green-50 border border-green-200 rounded-xl p-3 lg:p-5">
                   <p className="text-xs lg:text-sm font-bold text-sedo-green mb-1">Transcription :</p>
