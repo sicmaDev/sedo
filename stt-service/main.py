@@ -59,6 +59,8 @@ NOMBRES_FON = {
     "a ki ɖokpo": 1000, "kεki ɖokpo": 1000, "cakin ɖokpo": 1000, "caki ɖokpó": 1000,
     "chaki ɖokpo": 1000, "chaki ɖokpoo": 1000,
     "jaki ɖokpo": 1000, "jaki ɖokpoo": 1000,
+    "ja ti do kpo": 1000, "ja kεɖokpo": 1000, "ja kido kpo": 1000,
+    "ja kε ɖo xo": 1000, "jake ɖokpo": 1000, "ca ke ɖokpo": 1000,
     "nucaki ɖokpo": 1000, "nucaki ɖokpoo": 1000,
     "ciaki ɖokpo": 1000, "ciaki ɖokpoo": 1000, "ciaki ɖokpó": 1000,
     "ca xe ɖokpo": 1000, "ca ke ɖokpo": 1000,
@@ -91,6 +93,7 @@ NOMBRES_FON = {
     "caki ɖokpo atade": 1500,
     # 2000
     "caki wu we": 2000, "caki we": 2000, "caki hwe": 2000, "caki εnε": 2000,
+    "jaki we": 2000, "ja ki we": 2000,
     # 2500
     "a ki we a ɖa ɖe": 2500,
     # 3000
